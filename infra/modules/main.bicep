@@ -21,8 +21,8 @@ param hitlWebformImage string = ''
 @description('Optional override for the escalation timer job image during infrastructure deployments.')
 param escalationTimerJobImage string = ''
 
-@description('Deploy the ACA workloads (apps/jobs) during infrastructure rollout. Keep false until workload images are published.')
-param enableContainerAppWorkloads bool = false
+@description('Deploy the ACA workloads (apps/jobs) during infrastructure rollout. Placeholder images cover first-time infra deployments before workload images are published.')
+param enableContainerAppWorkloads bool = true
 
 @description('Optional override for the upload-web image during infrastructure deployments.')
 param uploadWebImage string = ''

@@ -63,8 +63,8 @@ param hitlWebformImage string = ''
 @description('Optional override for the escalation timer ACA Job image.')
 param escalationTimerJobImage string = ''
 
-@description('Deploy Container App workloads (apps/jobs). Disable for infrastructure-only rollouts before application images exist.')
-param enableWorkloads bool = false
+@description('Deploy Container App workloads (apps/jobs). Placeholder images cover first-time infra rollouts before real application images exist.')
+param enableWorkloads bool = true
 
 @description('Optional override for the reconciliation ACA Job image.')
 param reconciliationJobImage string = ''

@@ -21,7 +21,7 @@
 
 ### Parker — Deployment notes (Issue #6)
 - Name collisions with legacy `verdecoratest` resources; use deterministic `verdecora-simple`-scoped names with short unique suffix.
-- Infrastructure rollouts: `enableContainerAppWorkloads` defaults to `false`; enable when container images exist in ACR.
+- Infrastructure rollouts: `enableContainerAppWorkloads` defaults to `true`; placeholder MCR images keep ACA workloads deployable before real images exist in ACR.
 - AI Foundry deployment: `enableModelDeployments` defaults to `false` due to policy/quota validation; enable after confirmation.
 
 ### Dallas — CI/CD Redesign (Issue #4)

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "2535492032135237203"
+      "templateHash": "12670262961308985679"
     }
   },
   "parameters": {
@@ -59,9 +59,9 @@
     },
     "enableContainerAppWorkloads": {
       "type": "bool",
-      "defaultValue": false,
+      "defaultValue": true,
       "metadata": {
-        "description": "Deploy the ACA workloads (apps/jobs) during infrastructure rollout. Keep false until workload images are published."
+        "description": "Deploy the ACA workloads (apps/jobs) during infrastructure rollout. Placeholder images cover first-time infra deployments before workload images are published."
       }
     },
     "uploadWebImage": {
@@ -1900,7 +1900,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "18312000512882012299"
+              "templateHash": "10822722849239378189"
             }
           },
           "parameters": {
@@ -2041,9 +2041,9 @@
             },
             "enableWorkloads": {
               "type": "bool",
-              "defaultValue": false,
+              "defaultValue": true,
               "metadata": {
-                "description": "Deploy Container App workloads (apps/jobs). Disable for infrastructure-only rollouts before application images exist."
+                "description": "Deploy Container App workloads (apps/jobs). Placeholder images cover first-time infra rollouts before real application images exist."
               }
             },
             "reconciliationJobImage": {
