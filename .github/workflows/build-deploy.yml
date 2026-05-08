@@ -142,10 +142,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          IMAGE_REF="$ACR_NAME.azurecr.io/verdecora-orchestrator:${{ github.sha }}"
+          REGISTRY_SERVER="$ACR_NAME.azurecr.io"
+
+          if ! az containerapp show --name "$ACA_ORCHESTRATOR" --resource-group "$RESOURCE_GROUP" >/dev/null 2>&1; then
+            echo "::warning::Container App '$ACA_ORCHESTRATOR' not found in '$RESOURCE_GROUP'; skipping deploy. enableContainerAppWorkloads may still be false."
+            exit 0
+          fi
+
           az containerapp update \
             --name "$ACA_ORCHESTRATOR" \
             --resource-group "$RESOURCE_GROUP" \
-            --image "$ACR_NAME.azurecr.io/verdecora-orchestrator:${{ github.sha }}"
+            --image "$IMAGE_REF" \
+            --registry-server "$REGISTRY_SERVER" \
+            --registry-identity "system"
 
   build-hitl:
     needs: detect-changes
@@ -188,10 +198,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          IMAGE_REF="$ACR_NAME.azurecr.io/verdecora-hitl-webform:${{ github.sha }}"
+          REGISTRY_SERVER="$ACR_NAME.azurecr.io"
+
+          if ! az containerapp show --name "$ACA_HITL" --resource-group "$RESOURCE_GROUP" >/dev/null 2>&1; then
+            echo "::warning::Container App '$ACA_HITL' not found in '$RESOURCE_GROUP'; skipping deploy. enableContainerAppWorkloads may still be false."
+            exit 0
+          fi
+
           az containerapp update \
             --name "$ACA_HITL" \
             --resource-group "$RESOURCE_GROUP" \
-            --image "$ACR_NAME.azurecr.io/verdecora-hitl-webform:${{ github.sha }}"
+            --image "$IMAGE_REF" \
+            --registry-server "$REGISTRY_SERVER" \
+            --registry-identity "system"
 
   build-dedup:
     needs: detect-changes
@@ -234,10 +254,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          IMAGE_REF="$ACR_NAME.azurecr.io/verdecora-flow0-dedup:${{ github.sha }}"
+          REGISTRY_SERVER="$ACR_NAME.azurecr.io"
+
+          if ! az containerapp job show --name "$ACA_DEDUP" --resource-group "$RESOURCE_GROUP" >/dev/null 2>&1; then
+            echo "::warning::Container App Job '$ACA_DEDUP' not found in '$RESOURCE_GROUP'; skipping deploy. enableContainerAppWorkloads may still be false."
+            exit 0
+          fi
+
           az containerapp job update \
             --name "$ACA_DEDUP" \
             --resource-group "$RESOURCE_GROUP" \
-            --image "$ACR_NAME.azurecr.io/verdecora-flow0-dedup:${{ github.sha }}"
+            --image "$IMAGE_REF" \
+            --registry-server "$REGISTRY_SERVER" \
+            --registry-identity "system"
 
   build-escalation:
     needs: detect-changes
@@ -280,10 +310,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          IMAGE_REF="$ACR_NAME.azurecr.io/verdecora-escalation-timer:${{ github.sha }}"
+          REGISTRY_SERVER="$ACR_NAME.azurecr.io"
+
+          if ! az containerapp job show --name "$ACA_ESCALATION" --resource-group "$RESOURCE_GROUP" >/dev/null 2>&1; then
+            echo "::warning::Container App Job '$ACA_ESCALATION' not found in '$RESOURCE_GROUP'; skipping deploy. enableContainerAppWorkloads may still be false."
+            exit 0
+          fi
+
           az containerapp job update \
             --name "$ACA_ESCALATION" \
             --resource-group "$RESOURCE_GROUP" \
-            --image "$ACR_NAME.azurecr.io/verdecora-escalation-timer:${{ github.sha }}"
+            --image "$IMAGE_REF" \
+            --registry-server "$REGISTRY_SERVER" \
+            --registry-identity "system"
 
   build-upload-web:
     needs: detect-changes
@@ -326,7 +366,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          IMAGE_REF="$ACR_NAME.azurecr.io/verdecora-upload-web:${{ github.sha }}"
+          REGISTRY_SERVER="$ACR_NAME.azurecr.io"
+
+          if ! az containerapp show --name "$ACA_UPLOAD_WEB" --resource-group "$RESOURCE_GROUP" >/dev/null 2>&1; then
+            echo "::warning::Container App '$ACA_UPLOAD_WEB' not found in '$RESOURCE_GROUP'; skipping deploy."
+            exit 0
+          fi
+
           az containerapp update \
             --name "$ACA_UPLOAD_WEB" \
             --resource-group "$RESOURCE_GROUP" \
-            --image "$ACR_NAME.azurecr.io/verdecora-upload-web:${{ github.sha }}"
+            --image "$IMAGE_REF" \
+            --registry-server "$REGISTRY_SERVER" \
+            --registry-identity "system"
