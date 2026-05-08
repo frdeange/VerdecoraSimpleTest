@@ -137,12 +137,17 @@ class OrchestratorService:
         if agent_client is not None:
             gpt5_client = gpt5_client or agent_client
             gpt5_mini_client = gpt5_mini_client or agent_client
+
+        # Wire BC MCP tools into the agent pipeline (issues #60, #61)
+        mcp_tools = self._build_mcp_tools()
+
         self.pipeline = AlbaranPipeline(
             config=get_agents_config(),
             project_endpoint=self.config.azure_ai_project_endpoint,
             credential=self.dependencies.get_credential(),
             gpt5_client=gpt5_client,
             gpt5_mini_client=gpt5_mini_client,
+            mcp_tools=mcp_tools,
         )
         self.gpt5_client = self.pipeline.gpt5_client
         self.gpt5_mini_client = self.pipeline.gpt5_mini_client
@@ -164,6 +169,31 @@ class OrchestratorService:
         readiness["queue_name"] = self.config.extraction_queue_name
         readiness["hitl_queue_name"] = self.config.hitl_queue_name
         return readiness
+
+    @staticmethod
+    def _build_mcp_tools() -> dict[str, list[Any]] | None:
+        """Instantiate BC MCP client and build agent-framework tool registry.
+
+        Returns ``None`` if the BC MCP client is unavailable (missing deps or
+        env vars) so the pipeline falls back to zero-tool mode gracefully.
+        """
+        import logging as _logging
+
+        _log = _logging.getLogger(__name__)
+        try:
+            from src.mcp.bc_mcp.client import BCMCPClient
+            from src.mcp.bc_mcp.tools import build_bc_tool_registry
+
+            bc_client = BCMCPClient()
+            tools = build_bc_tool_registry(bc_client)
+            _log.info(
+                "BC MCP tools wired: %s",
+                {k: [t.name for t in v] for k, v in tools.items()},
+            )
+            return tools
+        except Exception:
+            _log.warning("Could not build BC MCP tools — pipeline will run without BC integration", exc_info=True)
+            return None
 
     def _build_processing_id(self, request: OrchestrationRequest) -> str:
         if request.processing_id:
@@ -245,6 +275,28 @@ class OrchestratorService:
         async with service_bus_client.get_queue_sender(queue_name=self.config.hitl_queue_name) as sender:
             await sender.send_messages(ServiceBusMessage(sender_payload, content_type="application/json"))
 
+    async def _send_hitl_email_notification(self, result: OrchestrationResult) -> None:
+        """Send email notification to reviewers via ACS when routing to HITL (issue #58)."""
+        import logging as _logging
+
+        _log = _logging.getLogger(__name__)
+        try:
+            from src.agents.communication_agent import CommunicationAgentService
+            from src.models.communication import EscalationLevel
+
+            container = await self.dependencies.get_processing_container()
+            service = CommunicationAgentService(records_container=container)
+            review_record = result.model_dump(mode="json")
+            review_record["id"] = result.processing_id
+            await service.handle_hitl_review(review_record, escalation_level=EscalationLevel.INITIAL)
+            _log.info("HITL email notification sent for %s", result.processing_id)
+        except Exception:
+            _log.warning(
+                "HITL email notification failed for %s — review is queued but email was not sent",
+                result.processing_id,
+                exc_info=True,
+            )
+
     def _extract_total_amount(self, metadata: dict[str, Any]) -> float | None:
         raw_total = metadata.get("total_amount")
         if raw_total is None:
@@ -322,6 +374,7 @@ class OrchestratorService:
             await self._write_processing_record(result)
             if result.status == "hitl_pending":
                 await self._send_hitl_message(result)
+                await self._send_hitl_email_notification(result)
             return result
         except Exception as exc:
             failure_result = OrchestrationResult(
