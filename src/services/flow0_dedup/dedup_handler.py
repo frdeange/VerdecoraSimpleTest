@@ -28,6 +28,17 @@ def parse_event_grid_payload(payload: str | bytes | bytearray | dict[str, Any] |
     return EventGridEnvelope.model_validate(raw_payload)
 
 
+def parse_service_bus_payload(payload: str | bytes | bytearray | dict[str, Any] | list[Any]) -> Any:
+    """Parse a raw Service Bus payload into a Python object."""
+
+    raw_payload: Any = payload
+    if isinstance(raw_payload, (bytes, bytearray)):
+        raw_payload = raw_payload.decode("utf-8")
+    if isinstance(raw_payload, str):
+        raw_payload = json.loads(raw_payload)
+    return raw_payload
+
+
 def extract_store_id(blob_path: str) -> str:
     """Return the tienda/store identifier embedded in the blob path."""
 
@@ -87,6 +98,7 @@ class Flow0DedupHandler:
         *,
         upload_session_id: str | None = None,
         uploader_oid: str | None = None,
+        uploader_name: str | None = None,
     ) -> ProcessingRecord:
         """Build the Cosmos processing record for a newly ingested blob."""
 
@@ -116,6 +128,7 @@ class Flow0DedupHandler:
             },
             upload_session_id=upload_session_id,
             uploader_oid=uploader_oid,
+            uploader_name=uploader_name,
         )
 
     def build_forward_message(self, record: ProcessingRecord) -> ForwardedExtractionMessage:
@@ -134,6 +147,7 @@ class Flow0DedupHandler:
             metadata=record.source_metadata,
             upload_session_id=record.upload_session_id,
             uploader_oid=record.uploader_oid,
+            uploader_name=record.uploader_name,
         )
 
     def forward_to_extraction_queue(self, record: ProcessingRecord) -> None:
@@ -159,8 +173,10 @@ class Flow0DedupHandler:
 
         session_id = session_payload.get("session_id", "")
         user_oid = session_payload.get("user_oid", "")
+        user_name = session_payload.get("user_name")
         files = session_payload.get("files", [])
         confirmed_at = session_payload.get("confirmed_at")
+        timestamp = session_payload.get("timestamp", confirmed_at)
 
         groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for file_entry in files:
@@ -173,8 +189,10 @@ class Flow0DedupHandler:
         for group_key, group_files in groups.items():
             first_file = group_files[0]
             blob_paths = [f.get("blob_path", "") for f in group_files]
+            blob_urls = [f.get("blob_url") or f.get("blob_path", "") for f in group_files]
             blob_names = [f.get("filename", "") for f in group_files]
             primary_blob_path = blob_paths[0]
+            primary_blob_url = blob_urls[0]
             primary_blob_name = blob_names[0]
 
             store_id = extract_store_id(primary_blob_path) if "/" in primary_blob_path else "upload-web"
@@ -191,19 +209,23 @@ class Flow0DedupHandler:
                 event_time=now,
                 event_date=now.date().isoformat(),
                 dedup_key=dedup_key,
-                blob_url=first_file.get("blob_path", ""),
+                blob_url=primary_blob_url,
                 blob_path=primary_blob_path,
                 blob_name=primary_blob_name,
                 source_metadata={
                     "session_id": session_id,
+                    "timestamp": timestamp,
                     "confirmed_at": confirmed_at,
                     "albaran_group": group_key,
+                    "blob_urls": blob_urls,
                     "blob_paths": blob_paths,
                     "blob_names": blob_names,
                     "page_count": len(group_files),
+                    "user_name": user_name,
                 },
                 upload_session_id=session_id,
                 uploader_oid=user_oid,
+                uploader_name=user_name,
             )
 
             self._container_client.upsert_item(body=record.model_dump(mode="json"))
@@ -237,7 +259,11 @@ class Flow0DedupHandler:
     def handle_message(self, payload: str | bytes | bytearray | dict[str, Any] | list[Any]) -> bool:
         """Process one message and return whether it was forwarded downstream."""
 
-        event = parse_event_grid_payload(payload)
+        raw_payload = parse_service_bus_payload(payload)
+        if isinstance(raw_payload, dict) and {"session_id", "files"}.issubset(raw_payload):
+            return bool(self.handle_session_message(raw_payload))
+
+        event = parse_event_grid_payload(raw_payload)
         dedup_key = build_dedup_key(event)
         existing = self.find_existing_record(event, dedup_key)
         if existing:

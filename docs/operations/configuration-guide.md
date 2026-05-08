@@ -75,6 +75,13 @@
 | `FLOW0_SOURCE_QUEUE_NAME` | `extraccion-queue` | Input queue |
 | `FLOW0_TARGET_QUEUE_NAME` | `extraccion-in` | Output queue |
 
+### Upload web
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `SERVICEBUS_FQ_NAMESPACE` | required | Service Bus namespace used for confirmed upload dispatch |
+| `SERVICEBUS_EXTRACTION_QUEUE` | `extraccion-queue` | Queue where upload-web publishes confirmed sessions for Flow 0 dedup |
+
 ### MCP servers
 
 | Variable | Default | Purpose |

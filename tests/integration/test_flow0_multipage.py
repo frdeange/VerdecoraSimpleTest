@@ -44,6 +44,7 @@ class FakeSender:
 def _build_session_payload(
     session_id: str = "sess-multi-001",
     user_oid: str = "oid-user-001",
+    user_name: str = "Store Upload User",
     files: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     if files is None:
@@ -51,6 +52,8 @@ def _build_session_payload(
     return {
         "session_id": session_id,
         "user_oid": user_oid,
+        "user_name": user_name,
+        "timestamp": datetime.now(UTC).isoformat(),
         "files": files,
         "confirmed_at": datetime.now(UTC).isoformat(),
     }
@@ -65,9 +68,24 @@ def test_three_files_one_group_single_record() -> None:
 
     payload = _build_session_payload(
         files=[
-            {"filename": "page1.pdf", "blob_path": "sess-multi-001/page1.pdf", "albaran_group": "alb-A"},
-            {"filename": "page2.pdf", "blob_path": "sess-multi-001/page2.pdf", "albaran_group": "alb-A"},
-            {"filename": "page3.pdf", "blob_path": "sess-multi-001/page3.pdf", "albaran_group": "alb-A"},
+            {
+                "filename": "page1.pdf",
+                "blob_path": "sess-multi-001/page1.pdf",
+                "blob_url": "https://acct.blob.core.windows.net/albaranes-raw/sess-multi-001/page1.pdf",
+                "albaran_group": "alb-A",
+            },
+            {
+                "filename": "page2.pdf",
+                "blob_path": "sess-multi-001/page2.pdf",
+                "blob_url": "https://acct.blob.core.windows.net/albaranes-raw/sess-multi-001/page2.pdf",
+                "albaran_group": "alb-A",
+            },
+            {
+                "filename": "page3.pdf",
+                "blob_path": "sess-multi-001/page3.pdf",
+                "blob_url": "https://acct.blob.core.windows.net/albaranes-raw/sess-multi-001/page3.pdf",
+                "albaran_group": "alb-A",
+            },
         ]
     )
 
@@ -76,11 +94,15 @@ def test_three_files_one_group_single_record() -> None:
     assert len(records) == 1
     assert records[0].upload_session_id == "sess-multi-001"
     assert records[0].uploader_oid == "oid-user-001"
+    assert records[0].uploader_name == "Store Upload User"
+    assert records[0].blob_url == "https://acct.blob.core.windows.net/albaranes-raw/sess-multi-001/page1.pdf"
     assert records[0].source_metadata["page_count"] == 3
+    assert len(records[0].source_metadata["blob_urls"]) == 3
     assert len(records[0].source_metadata["blob_paths"]) == 3
     assert len(container.items) == 1
     assert len(sender.messages) == 1
     assert sender.messages[0]["albaran_group"] == "alb-A"
+    assert sender.messages[0]["uploader_name"] == "Store Upload User"
 
 
 @pytest.mark.integration
@@ -93,9 +115,24 @@ def test_two_groups_two_records() -> None:
     payload = _build_session_payload(
         session_id="sess-multi-002",
         files=[
-            {"filename": "a1.pdf", "blob_path": "sess-multi-002/a1.pdf", "albaran_group": "group-X"},
-            {"filename": "a2.pdf", "blob_path": "sess-multi-002/a2.pdf", "albaran_group": "group-X"},
-            {"filename": "b1.pdf", "blob_path": "sess-multi-002/b1.pdf", "albaran_group": "group-Y"},
+            {
+                "filename": "a1.pdf",
+                "blob_path": "sess-multi-002/a1.pdf",
+                "blob_url": "https://acct.blob.core.windows.net/albaranes-raw/sess-multi-002/a1.pdf",
+                "albaran_group": "group-X",
+            },
+            {
+                "filename": "a2.pdf",
+                "blob_path": "sess-multi-002/a2.pdf",
+                "blob_url": "https://acct.blob.core.windows.net/albaranes-raw/sess-multi-002/a2.pdf",
+                "albaran_group": "group-X",
+            },
+            {
+                "filename": "b1.pdf",
+                "blob_path": "sess-multi-002/b1.pdf",
+                "blob_url": "https://acct.blob.core.windows.net/albaranes-raw/sess-multi-002/b1.pdf",
+                "albaran_group": "group-Y",
+            },
         ],
     )
 
@@ -126,7 +163,12 @@ def test_dedup_handles_reupload_within_session() -> None:
     payload = _build_session_payload(
         session_id="sess-reupload",
         files=[
-            {"filename": "doc.pdf", "blob_path": "sess-reupload/doc.pdf", "albaran_group": "g1"},
+            {
+                "filename": "doc.pdf",
+                "blob_path": "sess-reupload/doc.pdf",
+                "blob_url": "https://acct.blob.core.windows.net/albaranes-raw/sess-reupload/doc.pdf",
+                "albaran_group": "g1",
+            },
         ],
     )
 
@@ -156,8 +198,16 @@ def test_files_without_group_default_group() -> None:
     payload = _build_session_payload(
         session_id="sess-no-group",
         files=[
-            {"filename": "a.pdf", "blob_path": "sess-no-group/a.pdf"},
-            {"filename": "b.pdf", "blob_path": "sess-no-group/b.pdf"},
+            {
+                "filename": "a.pdf",
+                "blob_path": "sess-no-group/a.pdf",
+                "blob_url": "https://acct.blob.core.windows.net/albaranes-raw/sess-no-group/a.pdf",
+            },
+            {
+                "filename": "b.pdf",
+                "blob_path": "sess-no-group/b.pdf",
+                "blob_url": "https://acct.blob.core.windows.net/albaranes-raw/sess-no-group/b.pdf",
+            },
         ],
     )
 

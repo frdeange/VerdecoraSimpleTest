@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+from contextlib import nullcontext
 
 import pytest
 from azure.storage import blob as azure_blob
@@ -15,6 +16,7 @@ from src.upload_web.app import create_app
 from src.upload_web.config import UploadWebSettings, get_settings
 from src.upload_web.models.file_metadata import FileMetadata
 from src.upload_web.models.upload import SessionStatus, UploadFile, UploadSession
+from src.upload_web.routes import api as upload_api
 from src.upload_web.services import upload_session
 from src.upload_web.services.blob_sas import generate_upload_sas_url
 from src.upload_web.services.file_validator import (
@@ -428,6 +430,61 @@ def test_api_confirm_session() -> None:
 
 
 @pytest.mark.unit
+def test_publish_to_service_bus_uses_extraction_queue(monkeypatch: pytest.MonkeyPatch) -> None:
+    sent: dict[str, object] = {}
+
+    class FakeSender:
+        def send_messages(self, message: object) -> None:
+            sent["message"] = message
+
+    class FakeClient:
+        def get_queue_sender(self, *, queue_name: str) -> object:
+            sent["queue_name"] = queue_name
+            return nullcontext(FakeSender())
+
+    monkeypatch.setattr(
+        "src.upload_web.config.get_settings",
+        lambda: UploadWebSettings(
+            blob_account="https://acct.blob.core.windows.net",
+            raw_blob_container="albaranes-raw",
+            servicebus_namespace="sb-vds-dev-4vtapr.servicebus.windows.net",
+            extraction_queue_name="extraccion-queue",
+        ),
+    )
+    monkeypatch.setattr(security, "get_servicebus_client", lambda **_: FakeClient())
+
+    session = UploadSession(
+        session_id="sess-confirm-001",
+        user_oid="oid-123",
+        user_name="Parker Store",
+        files=[
+            UploadFile(
+                filename="doc.pdf",
+                blob_path="sess-confirm-001/doc.pdf",
+                content_type="application/pdf",
+                size_bytes=512,
+                albaran_group="group-A",
+            )
+        ],
+    )
+    session.confirmed_at = session.created_at
+
+    assert upload_api._publish_to_service_bus(session) is True
+    assert sent["queue_name"] == "extraccion-queue"
+
+    raw_message = sent["message"]
+    body = b"".join(bytes(part) for part in raw_message.body).decode("utf-8")
+    payload = json.loads(body)
+
+    assert payload["session_id"] == "sess-confirm-001"
+    assert payload["user_oid"] == "oid-123"
+    assert payload["user_name"] == "Parker Store"
+    assert payload["timestamp"] == session.confirmed_at.isoformat()
+    assert payload["files"][0]["blob_path"] == "sess-confirm-001/doc.pdf"
+    assert payload["files"][0]["blob_url"] == "https://acct.blob.core.windows.net/albaranes-raw/sess-confirm-001/doc.pdf"
+
+
+@pytest.mark.unit
 def test_api_confirm_no_files() -> None:
     with _api_client() as client:
         headers = _establish_session(client)
@@ -462,6 +519,16 @@ def test_api_confirm_idempotent() -> None:
 
     assert second_resp.status_code == 200
     assert second_resp.json()["processing_started"] is False
+
+
+@pytest.mark.unit
+def test_upload_web_settings_accept_servicebus_extraction_queue_alias() -> None:
+    settings = UploadWebSettings(
+        SERVICEBUS_FQ_NAMESPACE="sb-vds-dev-4vtapr.servicebus.windows.net",
+        SERVICEBUS_EXTRACTION_QUEUE="custom-extraccion-queue",
+    )
+
+    assert settings.extraction_queue_name == "custom-extraccion-queue"
 
 
 # ── HTML page endpoints ──────────────────────────────────────────────

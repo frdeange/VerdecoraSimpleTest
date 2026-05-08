@@ -1,6 +1,38 @@
 from __future__ import annotations
 
-from src.services.flow0_dedup.dedup_handler import build_dedup_key, build_partition_key, parse_event_grid_payload
+import json
+from typing import Any
+
+from src.services.flow0_dedup.dedup_handler import (
+    Flow0DedupHandler,
+    build_dedup_key,
+    build_partition_key,
+    parse_event_grid_payload,
+)
+
+
+class FakeCosmosContainer:
+    def __init__(self) -> None:
+        self.items: dict[str, dict[str, Any]] = {}
+
+    def upsert_item(self, *, body: dict[str, Any]) -> dict[str, Any]:
+        self.items[str(body["id"])] = dict(body)
+        return dict(body)
+
+    def query_items(self, *, parameters: list[dict[str, Any]], **_: Any) -> list[dict[str, Any]]:
+        param_map = {p["name"]: p["value"] for p in parameters}
+        dedup_key = param_map.get("@dedup_key")
+        matches = [item for item in self.items.values() if item.get("dedup_key") == dedup_key]
+        return matches[:1]
+
+
+class FakeSender:
+    def __init__(self) -> None:
+        self.messages: list[dict[str, Any]] = []
+
+    def send_messages(self, message: Any) -> None:
+        body = b"".join(bytes(part) for part in message.body)
+        self.messages.append(json.loads(body.decode("utf-8")))
 
 
 def test_parse_event_grid_payload_accepts_event_grid_arrays() -> None:
@@ -60,3 +92,27 @@ def test_build_partition_key_uses_store_and_year_month() -> None:
     )
 
     assert build_partition_key("tienda_001", event.eventTime) == "tienda_001_2026_05"
+
+
+def test_handle_message_accepts_upload_session_payloads() -> None:
+    handler = Flow0DedupHandler(FakeCosmosContainer(), FakeSender())
+
+    forwarded = handler.handle_message(
+        {
+            "session_id": "sess-001",
+            "user_oid": "oid-001",
+            "user_name": "Store User",
+            "timestamp": "2026-05-09T00:00:00Z",
+            "confirmed_at": "2026-05-09T00:00:00Z",
+            "files": [
+                {
+                    "filename": "page1.pdf",
+                    "blob_path": "sess-001/page1.pdf",
+                    "blob_url": "https://acct.blob.core.windows.net/albaranes-raw/sess-001/page1.pdf",
+                    "albaran_group": "alb-1",
+                }
+            ],
+        }
+    )
+
+    assert forwarded is True

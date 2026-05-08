@@ -63,7 +63,7 @@ var resolvedUploadWebImage = empty(uploadWebImage) ? 'mcr.microsoft.com/k8se/qui
 var useAcrRegistry = !empty(uploadWebImage)
 var rawBlobContainerName = 'albaranes-raw'
 var serviceBusFullyQualifiedNamespace = '${serviceBusNamespaceName}.servicebus.windows.net'
-var serviceBusTopicName = 'albaran-events'
+var extractionQueueName = 'extraccion-queue'
 var uploadSessionsContainerName = 'upload-sessions'
 var authSecretName = 'microsoft-provider-authentication-secret'
 var authEnabled = enableAuth && !empty(entraClientId) && !empty(entraClientSecret)
@@ -180,8 +180,8 @@ resource uploadWebApp 'Microsoft.App/containerApps@2025-01-01' = {
               value: serviceBusFullyQualifiedNamespace
             }
             {
-              name: 'SERVICEBUS_TOPIC'
-              value: serviceBusTopicName
+              name: 'SERVICEBUS_EXTRACTION_QUEUE'
+              value: extractionQueueName
             }
             {
               name: 'KEY_VAULT_URL'

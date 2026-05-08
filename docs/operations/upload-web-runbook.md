@@ -137,10 +137,9 @@ Tiempo de respuesta: < 15 min
 
 2. Verificar profundidad de cola:
    ```bash
-   az servicebus topic subscription show \
+   az servicebus queue show \
      --namespace-name <sb-namespace> \
-     --topic-name albaran-processing \
-     --name <subscription> \
+     --name extraccion-queue \
      --query "countDetails"
    ```
 

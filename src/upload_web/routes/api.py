@@ -4,6 +4,7 @@ import json
 import logging
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
+from urllib.parse import quote
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -74,6 +75,13 @@ def _analyze_session_files_with_document_intelligence(
         doc_results.append(analyze_with_document_intelligence(blob_url, endpoint))
 
     return doc_results
+
+
+def _build_session_blob_url(*, account_url: str, container: str, blob_path: str) -> str:
+    normalized_account = account_url.rstrip("/")
+    normalized_container = quote(container.strip("/"))
+    normalized_blob_path = "/".join(quote(segment) for segment in blob_path.split("/") if segment)
+    return f"{normalized_account}/{normalized_container}/{normalized_blob_path}"
 
 
 @router.post("", response_model=UploadSession, status_code=status.HTTP_201_CREATED)
@@ -267,22 +275,42 @@ def _publish_to_service_bus(session: UploadSession) -> bool:
         from src.config.security import get_servicebus_client
 
         sb_client = get_servicebus_client(fully_qualified_namespace=settings.servicebus_namespace)
+        confirmed_at = session.confirmed_at.isoformat() if session.confirmed_at else None
         message_body = json.dumps(
             {
                 "session_id": session.session_id,
                 "user_oid": session.user_oid,
-                "files": [f.model_dump(mode="json") for f in session.files],
-                "confirmed_at": session.confirmed_at.isoformat() if session.confirmed_at else None,
+                "user_name": session.user_name,
+                "timestamp": confirmed_at,
+                "confirmed_at": confirmed_at,
+                "files": [
+                    {
+                        **f.model_dump(mode="json"),
+                        "blob_url": _build_session_blob_url(
+                            account_url=settings.blob_account,
+                            container=settings.raw_blob_container,
+                            blob_path=f.blob_path,
+                        ),
+                    }
+                    for f in session.files
+                ],
                 "preflight": session.preflight.model_dump(mode="json") if session.preflight else None,
             }
         )
 
         from azure.servicebus import ServiceBusMessage
 
-        with sb_client.get_topic_sender(topic_name=settings.servicebus_topic) as sender:
-            sender.send_messages(ServiceBusMessage(message_body))
+        with sb_client.get_queue_sender(queue_name=settings.extraction_queue_name) as sender:
+            sender.send_messages(
+                ServiceBusMessage(
+                    message_body,
+                    content_type="application/json",
+                    subject="upload.session.confirmed",
+                    application_properties={"eventType": "upload.session.confirmed"},
+                )
+            )
 
-        logger.info("Published session %s to Service Bus topic %s.", session.session_id, settings.servicebus_topic)
+        logger.info("Published session %s to Service Bus queue %s.", session.session_id, settings.extraction_queue_name)
         return True
     except Exception:
         logger.error("Failed to publish session %s to Service Bus.", session.session_id, exc_info=True)

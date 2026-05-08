@@ -209,6 +209,8 @@ class OrchestratorService:
             record["upload_session_id"] = result.metadata["upload_session_id"]
         if result.metadata.get("uploader_oid"):
             record["uploader_oid"] = result.metadata["uploader_oid"]
+        if result.metadata.get("uploader_name"):
+            record["uploader_name"] = result.metadata["uploader_name"]
         await container.upsert_item(record)
 
     async def _write_processing_status(

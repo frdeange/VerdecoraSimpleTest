@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "11703869288472257787"
+      "templateHash": "3722117051947836697"
     }
   },
   "parameters": {
@@ -488,7 +488,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "484762332875601515"
+              "templateHash": "13176678859185329541"
             }
           },
           "parameters": {
@@ -638,6 +638,26 @@
               "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('accountName'), 'albaranes-db')]"
               ]
+            },
+            {
+              "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+              "apiVersion": "2023-04-15",
+              "name": "[format('{0}/{1}/{2}', variables('accountName'), 'albaranes-db', 'processing-records')]",
+              "properties": {
+                "resource": {
+                  "id": "processing-records",
+                  "partitionKey": {
+                    "paths": [
+                      "/id"
+                    ],
+                    "kind": "Hash"
+                  }
+                },
+                "options": {}
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('accountName'), 'albaranes-db')]"
+              ]
             }
           ],
           "outputs": {
@@ -696,6 +716,13 @@
                 "description": "Upload sessions container id."
               },
               "value": "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('accountName'), 'albaranes-db', 'upload-sessions')]"
+            },
+            "processingRecordsContainerId": {
+              "type": "string",
+              "metadata": {
+                "description": "Processing records container id."
+              },
+              "value": "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers', variables('accountName'), 'albaranes-db', 'processing-records')]"
             }
           }
         }
@@ -1906,7 +1933,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "10822722849239378189"
+              "templateHash": "12632874019360599972"
             }
           },
           "parameters": {
@@ -2146,6 +2173,14 @@
                           "value": "[parameters('cosmosEndpoint')]"
                         },
                         {
+                          "name": "DATABASE_NAME",
+                          "value": "albaranes-db"
+                        },
+                        {
+                          "name": "PROCESSING_CONTAINER_NAME",
+                          "value": "processing-records"
+                        },
+                        {
                           "name": "DOCINTELL_ENDPOINT",
                           "value": "[parameters('docIntellEndpoint')]"
                         },
@@ -2354,6 +2389,14 @@
                           "value": "[parameters('cosmosEndpoint')]"
                         },
                         {
+                          "name": "DATABASE_NAME",
+                          "value": "albaranes-db"
+                        },
+                        {
+                          "name": "PROCESSING_CONTAINER_NAME",
+                          "value": "processing-records"
+                        },
+                        {
                           "name": "STORAGE_ACCOUNT_URL",
                           "value": "[parameters('storageAccountUrl')]"
                         },
@@ -2422,6 +2465,14 @@
                         {
                           "name": "COSMOS_ENDPOINT",
                           "value": "[parameters('cosmosEndpoint')]"
+                        },
+                        {
+                          "name": "DATABASE_NAME",
+                          "value": "albaranes-db"
+                        },
+                        {
+                          "name": "PROCESSING_CONTAINER_NAME",
+                          "value": "processing-records"
                         },
                         {
                           "name": "ACS_ENDPOINT",
@@ -2743,7 +2794,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "10103683402538309770"
+              "templateHash": "16095119262093221612"
             }
           },
           "parameters": {
@@ -2870,7 +2921,7 @@
             "useAcrRegistry": "[not(empty(parameters('uploadWebImage')))]",
             "rawBlobContainerName": "albaranes-raw",
             "serviceBusFullyQualifiedNamespace": "[format('{0}.servicebus.windows.net', parameters('serviceBusNamespaceName'))]",
-            "serviceBusTopicName": "albaran-events",
+            "extractionQueueName": "extraccion-queue",
             "uploadSessionsContainerName": "upload-sessions",
             "authSecretName": "microsoft-provider-authentication-secret",
             "authEnabled": "[and(and(parameters('enableAuth'), not(empty(parameters('entraClientId')))), not(empty(parameters('entraClientSecret'))))]",
@@ -2945,6 +2996,14 @@
                           "value": "[parameters('cosmosEndpoint')]"
                         },
                         {
+                          "name": "DATABASE_NAME",
+                          "value": "albaranes-db"
+                        },
+                        {
+                          "name": "COSMOS_DATABASE",
+                          "value": "albaranes-db"
+                        },
+                        {
                           "name": "DOCINTELL_ENDPOINT",
                           "value": "[parameters('docIntellEndpoint')]"
                         },
@@ -2953,8 +3012,8 @@
                           "value": "[variables('serviceBusFullyQualifiedNamespace')]"
                         },
                         {
-                          "name": "SERVICEBUS_TOPIC",
-                          "value": "[variables('serviceBusTopicName')]"
+                          "name": "SERVICEBUS_EXTRACTION_QUEUE",
+                          "value": "[variables('extractionQueueName')]"
                         },
                         {
                           "name": "KEY_VAULT_URL",
