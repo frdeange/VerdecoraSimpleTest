@@ -24,7 +24,9 @@ def get_email_client() -> Any:
 
 
 def _get_sender_address() -> str:
-    return require_env("ACS_SENDER_ADDRESS")
+    import os as _os
+
+    return _os.getenv("ACS_SENDER_ADDRESS") or _os.getenv("ACS_SENDER") or require_env("ACS_SENDER_ADDRESS")
 
 
 def _normalize_recipients(to: str | list[str]) -> list[str]:

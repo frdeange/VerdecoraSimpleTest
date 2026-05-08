@@ -21,11 +21,15 @@ def _get_bool_env(name: str, default: bool) -> bool:
 
 
 class OrchestratorConfig(BaseModel):
-    service_bus_namespace: str = Field(default_factory=lambda: _get_env("SERVICE_BUS_NAMESPACE", "verdecora-dev"))
+    service_bus_namespace: str = Field(
+        default_factory=lambda: _get_env("SERVICE_BUS_NAMESPACE", _get_env("SERVICEBUS_NAMESPACE", "verdecora-dev"))
+    )
     extraction_queue_name: str = Field(default_factory=lambda: _get_env("EXTRACTION_QUEUE_NAME", "extraction"))
     hitl_queue_name: str = Field(default_factory=lambda: _get_env("HITL_QUEUE_NAME", "hitl-review"))
     cosmos_endpoint: str = Field(default_factory=lambda: _get_env("COSMOS_ENDPOINT", "https://localhost:8081"))
-    database_name: str = Field(default_factory=lambda: _get_env("DATABASE_NAME", "verdecora"))
+    database_name: str = Field(
+        default_factory=lambda: _get_env("DATABASE_NAME", _get_env("COSMOS_DATABASE", "verdecora"))
+    )
     processing_container_name: str = Field(
         default_factory=lambda: _get_env("PROCESSING_CONTAINER_NAME", "processing-records")
     )
@@ -35,6 +39,11 @@ class OrchestratorConfig(BaseModel):
     acs_endpoint: str = Field(
         default_factory=lambda: _get_env("ACS_ENDPOINT", "https://example.unitedstates.communication.azure.com")
     )
+    acs_sender_address: str = Field(
+        default_factory=lambda: _get_env(
+            "ACS_SENDER_ADDRESS", _get_env("ACS_SENDER", "DoNotReply@example.azurecomm.net")
+        )
+    )
     key_vault_url: str = Field(default_factory=lambda: _get_env("KEY_VAULT_URL", "https://example-kv.vault.azure.net/"))
     azure_ai_project_endpoint: str = Field(
         default_factory=lambda: _get_env("AZURE_AI_PROJECT_ENDPOINT", DEFAULT_AZURE_AI_PROJECT_ENDPOINT)
@@ -43,6 +52,11 @@ class OrchestratorConfig(BaseModel):
     gpt5_mini_deployment: str = Field(default_factory=lambda: _get_env("GPT5_MINI_DEPLOYMENT", "gpt-5-mini"))
     docintell_endpoint: str = Field(
         default_factory=lambda: _get_env("DOCINTELL_ENDPOINT", "https://example.cognitiveservices.azure.com/")
+    )
+    bc_mcp_server_url: str = Field(
+        default_factory=lambda: _get_env(
+            "BC_MCP_SERVER_URL", _get_env("BC_MCP_URL", "https://mcp.businesscentral.dynamics.com")
+        )
     )
     service_bus_polling_enabled: bool = Field(
         default_factory=lambda: _get_bool_env("SERVICE_BUS_POLLING_ENABLED", True)

@@ -196,6 +196,7 @@ module containerApps './container-apps.bicep' = {
     hitlDecisionsTopicName: serviceBus.outputs.hitlDecisionsTopicName
     storageAccountUrl: storageAccountUrl
     acsEndpoint: acs.outputs.acsEndpoint
+    acsSenderAddress: 'DoNotReply@${acs.outputs.emailSenderDomain}'
     keyVaultUrl: keyVault.outputs.keyVaultUri
     tenantId: subscription().tenantId
     acrLoginServer: acr.outputs.acrLoginServer

@@ -42,6 +42,9 @@ param storageAccountUrl string
 @description('Azure Communication Services endpoint exposed to the workloads.')
 param acsEndpoint string
 
+@description('ACS sender email address (e.g. DoNotReply@<domain>.azurecomm.net).')
+param acsSenderAddress string = ''
+
 @description('Key Vault endpoint exposed to the workloads.')
 param keyVaultUrl string
 
@@ -195,6 +198,10 @@ resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWo
             {
               name: 'ACS_ENDPOINT'
               value: acsEndpoint
+            }
+            {
+              name: 'ACS_SENDER_ADDRESS'
+              value: acsSenderAddress
             }
             {
               name: 'KEY_VAULT_URL'
@@ -387,6 +394,10 @@ resource hitlWebformApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWor
             {
               name: 'ACS_ENDPOINT'
               value: acsEndpoint
+            }
+            {
+              name: 'ACS_SENDER_ADDRESS'
+              value: acsSenderAddress
             }
             {
               name: 'HITL_DECISIONS_TOPIC_NAME'
