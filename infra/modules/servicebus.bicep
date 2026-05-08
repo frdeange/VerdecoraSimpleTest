@@ -42,6 +42,17 @@ resource extraccionQueue 'Microsoft.ServiceBus/namespaces/queues@2022-10-01-prev
   properties: {}
 }
 
+resource hitlReviewQueue 'Microsoft.ServiceBus/namespaces/queues@2022-10-01-preview' = {
+  parent: serviceBusNamespace
+  name: 'hitl-review'
+  properties: {
+    maxDeliveryCount: 10
+    deadLetteringOnMessageExpiration: true
+    lockDuration: 'PT1M'
+    defaultMessageTimeToLive: 'P14D'
+  }
+}
+
 resource albaranEventsTopic 'Microsoft.ServiceBus/namespaces/topics@2022-10-01-preview' = {
   parent: serviceBusNamespace
   name: 'albaran-events'
@@ -98,6 +109,12 @@ output extraccionQueueId string = extraccionQueue.id
 
 @description('Extraction queue name.')
 output extraccionQueueName string = last(split(extraccionQueue.name, '/'))
+
+@description('HITL review queue id.')
+output hitlReviewQueueId string = hitlReviewQueue.id
+
+@description('HITL review queue name.')
+output hitlReviewQueueName string = last(split(hitlReviewQueue.name, '/'))
 
 @description('Topic id.')
 output albaranEventsTopicId string = albaranEventsTopic.id

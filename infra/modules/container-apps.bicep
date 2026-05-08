@@ -33,6 +33,9 @@ param extractionQueueName string = 'extraccion-in'
 @description('Topic name used by the HITL webform to publish review decisions.')
 param hitlDecisionsTopicName string = 'hitl-decisions'
 
+@description('Queue name used by the orchestrator to publish manual-review handoff messages.')
+param hitlReviewQueueName string = 'hitl-review'
+
 @description('Storage account blob endpoint exposed to the workloads.')
 param storageAccountUrl string
 
@@ -172,6 +175,10 @@ resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWo
             {
               name: 'EXTRACTION_QUEUE_NAME'
               value: extractionQueueName
+            }
+            {
+              name: 'HITL_QUEUE_NAME'
+              value: hitlReviewQueueName
             }
             {
               name: 'STORAGE_ACCOUNT_URL'
