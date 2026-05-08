@@ -184,6 +184,7 @@ module containerApps './container-apps.bicep' = {
     serviceBusNamespaceName: serviceBus.outputs.serviceBusNamespaceName
     ingestionQueueName: serviceBus.outputs.ingestionQueueName
     extractionQueueName: serviceBus.outputs.extraccionQueueName
+    hitlReviewQueueName: serviceBus.outputs.hitlReviewQueueName
     hitlDecisionsTopicName: serviceBus.outputs.hitlDecisionsTopicName
     storageAccountUrl: storageAccountUrl
     acsEndpoint: acs.outputs.acsEndpoint
@@ -307,6 +308,12 @@ output extraccionQueueId string = serviceBus.outputs.extraccionQueueId
 
 @description('HITL decisions topic name.')
 output hitlDecisionsTopicName string = serviceBus.outputs.hitlDecisionsTopicName
+
+@description('HITL review queue id.')
+output hitlReviewQueueId string = serviceBus.outputs.hitlReviewQueueId
+
+@description('HITL review queue name.')
+output hitlReviewQueueName string = serviceBus.outputs.hitlReviewQueueName
 
 @description('Cosmos DB account id.')
 output cosmosAccountId string = cosmos.outputs.cosmosAccountId
