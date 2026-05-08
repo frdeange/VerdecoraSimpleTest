@@ -123,6 +123,23 @@ resource uploadSessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatab
   }
 }
 
+resource processingRecordsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = {
+  parent: albaranesDb
+  name: 'processing-records'
+  properties: {
+    resource: {
+      id: 'processing-records'
+      partitionKey: {
+        paths: [
+          '/id'
+        ]
+        kind: 'Hash'
+      }
+    }
+    options: {}
+  }
+}
+
 @description('Cosmos DB account id.')
 output cosmosAccountId string = cosmosAccount.id
 
@@ -146,3 +163,6 @@ output dlqContainerId string = dlqContainer.id
 
 @description('Upload sessions container id.')
 output uploadSessionsContainerId string = uploadSessionsContainer.id
+
+@description('Processing records container id.')
+output processingRecordsContainerId string = processingRecordsContainer.id
