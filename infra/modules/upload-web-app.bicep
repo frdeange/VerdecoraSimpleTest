@@ -40,7 +40,7 @@ var tags = {
   'managed-by': 'bicep'
 }
 var managedEnvironmentName = 'acae-upload-web-${environment}'
-var resolvedUploadWebImage = empty(uploadWebImage) ? '${acrLoginServer}/verdecora-upload-web:latest' : uploadWebImage
+var resolvedUploadWebImage = empty(uploadWebImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : uploadWebImage
 var rawBlobContainerName = 'albaranes-raw'
 var serviceBusFullyQualifiedNamespace = '${serviceBusNamespaceName}.servicebus.windows.net'
 var serviceBusTopicName = 'albaran-events'

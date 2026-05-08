@@ -80,10 +80,10 @@ var tags = {
 
 var managedEnvironmentName = 'acae-verdecora-${environment}'
 var serviceBusFullyQualifiedNamespace = '${serviceBusNamespaceName}.servicebus.windows.net'
-var resolvedOrchestratorImage = empty(orchestratorImage) ? '${acrLoginServer}/verdecora-orchestrator:latest' : orchestratorImage
-var resolvedDedupJobImage = empty(dedupJobImage) ? '${acrLoginServer}/verdecora-flow0-dedup:latest' : dedupJobImage
-var resolvedHitlWebformImage = empty(hitlWebformImage) ? '${acrLoginServer}/verdecora-hitl-webform:latest' : hitlWebformImage
-var resolvedEscalationTimerJobImage = empty(escalationTimerJobImage) ? '${acrLoginServer}/verdecora-escalation-timer:latest' : escalationTimerJobImage
+var resolvedOrchestratorImage = empty(orchestratorImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : orchestratorImage
+var resolvedDedupJobImage = empty(dedupJobImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : dedupJobImage
+var resolvedHitlWebformImage = empty(hitlWebformImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : hitlWebformImage
+var resolvedEscalationTimerJobImage = empty(escalationTimerJobImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : escalationTimerJobImage
 var resolvedReconciliationJobImage = empty(reconciliationJobImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : reconciliationJobImage
 var resolvedLearningJobImage = empty(learningJobImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : learningJobImage
 
