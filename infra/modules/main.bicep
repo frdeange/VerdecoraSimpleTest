@@ -39,7 +39,7 @@ param uploadWebAllowedAudiences array = []
 @description('Optional Microsoft Entra group object ids allowed to access upload-web.')
 param uploadWebAllowedGroupObjectIds array = []
 
-@description('Exact origins allowed to call Blob CORS for upload-web browser uploads (for example the Front Door custom domain).')
+@description('Exact origins allowed to call Blob CORS for upload-web browser uploads (for example the direct ACA FQDN or chosen custom domain).')
 param uploadWebBlobCorsAllowedOrigins array = []
 
 var resourceGroupName = 'rg-verdecora-simple-${environment}'
