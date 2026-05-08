@@ -9,6 +9,8 @@ Deploy with: `az deployment group create -t main.bicep`
 
 ## Upload web notes
 
+- Simplified infra deployments now use deterministic `verdecora-simple`-scoped resource names with a short unique suffix so they do not collide with older `verdecoratest` resources in the same subscription.
+- `infra/modules/main.bicep` keeps `enableContainerAppWorkloads=false` by default. Turn it on only after the real ACA images are published to ACR; the base infra deployment only provisions the managed environment.
 - Set `enableUploadWeb=true` to deploy `verdecora-upload-web-${environment}` into its own external ACA environment.
 - Pass the exact direct ACA/custom-domain origins through `uploadWebBlobCorsAllowedOrigins` so Blob CORS allows browser `PUT` uploads. For the simplified model this should be `https://<app-name>.<region>.azurecontainerapps.io` (or your custom domain).
 - Set `UPLOAD_WEB_PUBLIC_ORIGIN` (or `UPLOAD_WEB_PUBLIC_BASE_URL`) in the upload-web app settings when Easy Auth should emit absolute login/logout redirect targets for the final public host.

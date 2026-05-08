@@ -12,7 +12,8 @@ var tags = {
   'managed-by': 'bicep'
 }
 
-var namespaceName = 'sb-albaranes-${environment}'
+var uniqueSuffix = substring(uniqueString(subscription().subscriptionId, 'verdecora-simple', environment), 0, 6)
+var namespaceName = 'sb-vds-${environment}-${uniqueSuffix}'
 
 resource serviceBusNamespace 'Microsoft.ServiceBus/namespaces@2022-10-01-preview' = {
   name: namespaceName

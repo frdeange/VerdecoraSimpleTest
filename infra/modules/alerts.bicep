@@ -386,16 +386,16 @@ print ErrorRatePct = iff(totalRequests == 0, 0.0, todouble(errorRequests) * 100.
 var uploadWebAbandonedRateQuery = '''
 let windowStart = ago(1h);
 let created = toscalar(
-    customMetrics
+    AppMetrics
     | where TimeGenerated >= windowStart
-    | where name == 'upload_sessions_created'
-    | summarize sum(valueCount)
+    | where Name == 'upload_sessions_created'
+    | summarize sum(Sum)
 );
 let abandoned = toscalar(
-    customMetrics
+    AppMetrics
     | where TimeGenerated >= windowStart
-    | where name == 'upload_session_abandoned'
-    | summarize sum(valueCount)
+    | where Name == 'upload_session_abandoned'
+    | summarize sum(Sum)
 );
 print AbandonedRatePct = iff(created == 0, 0.0, todouble(abandoned) * 100.0 / todouble(created))
 '''
