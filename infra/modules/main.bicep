@@ -42,7 +42,7 @@ param uploadWebAllowedGroupObjectIds array = []
 @description('Exact origins allowed to call Blob CORS for upload-web browser uploads (for example the Front Door custom domain).')
 param uploadWebBlobCorsAllowedOrigins array = []
 
-var resourceGroupName = 'rg-verdecoratest-${environment}'
+var resourceGroupName = 'rg-verdecora-simple-${environment}'
 var storageAccountUrl = 'https://${storage.outputs.storageAccountName}.blob.${az.environment().suffixes.storage}/'
 
 module rg './resource-group.bicep' = {
@@ -52,18 +52,6 @@ module rg './resource-group.bicep' = {
     location: location
     resourceGroupName: resourceGroupName
   }
-}
-
-module network './network.bicep' = {
-  name: 'network'
-  scope: az.resourceGroup(resourceGroupName)
-  params: {
-    environment: environment
-    location: location
-  }
-  dependsOn: [
-    rg
-  ]
 }
 
 module serviceBus './servicebus.bicep' = {
@@ -179,74 +167,12 @@ module acs './acs.bicep' = {
   ]
 }
 
-/*
-Network hardening (Private Endpoints + NAT Gateway) is always deployed.
-The 'environment' parameter is kept for future dev/prod differentiation
-but the current PoC deploys a production-grade setup in all environments.
-*/
-var enableNetworkHardening = true // Always on — this PoC simulates a real production environment
-
-module natGateway './nat-gateway.bicep' = if (enableNetworkHardening) {
-  name: 'natGateway'
-  scope: az.resourceGroup(resourceGroupName)
-  params: {
-    environment: environment
-    location: location
-  }
-  dependsOn: [
-    rg
-  ]
-}
-
-module privateEndpoints './private-endpoints.bicep' = if (enableNetworkHardening) {
-  name: 'privateEndpoints'
-  scope: az.resourceGroup(resourceGroupName)
-  params: {
-    environment: environment
-    location: location
-    virtualNetworkId: network.outputs.virtualNetworkId
-    subnetId: network.outputs.subnetPeId
-    storageResourceId: storage.outputs.storageAccountId
-    cosmosResourceId: cosmos.outputs.cosmosAccountId
-    keyVaultResourceId: keyVault.outputs.keyVaultId
-    serviceBusResourceId: serviceBus.outputs.serviceBusNamespaceId
-    aiServicesResourceId: aiFoundry.outputs.aiServicesId
-    documentIntelligenceResourceId: docIntell.outputs.docIntellId
-    // ACS does not support Private Endpoints — secured via MI RBAC only
-  }
-  dependsOn: [
-    rg
-  ]
-}
-
-module runners './runners.bicep' = {
-  name: 'runners'
-  scope: az.resourceGroup(resourceGroupName)
-  params: {
-    environment: environment
-    location: location
-    infrastructureSubnetId: network.outputs.subnetRunnersId
-    keyVaultName: keyVault.outputs.keyVaultName
-    githubPatSecretUri: keyVault.outputs.githubPatSecretUri
-    repoUrl: 'https://github.com/frdeange/verdecoraTest'
-    runnerImage: '${acr.outputs.acrLoginServer}/github-runner-azure-cli:latest'
-    runnerRegistryServer: acr.outputs.acrLoginServer
-    acrResourceId: acr.outputs.acrId
-    resourceGroupId: rg.outputs.resourceGroupId
-  }
-  dependsOn: [
-    rg
-    privateEndpoints
-  ]
-}
-
 module containerApps './container-apps.bicep' = {
   name: 'containerApps'
   scope: az.resourceGroup(resourceGroupName)
   params: {
     environment: environment
     location: location
-    infrastructureSubnetId: network.outputs.subnetAcaEnvId
     logAnalyticsWorkspaceName: 'log-albaranes-${environment}'
     aiServicesEndpoint: aiFoundry.outputs.aiServicesEndpoint
     cosmosEndpoint: cosmos.outputs.cosmosEndpoint
@@ -268,8 +194,6 @@ module containerApps './container-apps.bicep' = {
   }
   dependsOn: [
     rg
-    natGateway
-    privateEndpoints
   ]
 }
 
@@ -279,7 +203,6 @@ module uploadWebApp './upload-web-app.bicep' = if (enableUploadWeb) {
   params: {
     environment: environment
     location: location
-    infrastructureSubnetId: network.outputs.subnetUploadWebId
     acrLoginServer: acr.outputs.acrLoginServer
     storageAccountUrl: storageAccountUrl
     cosmosEndpoint: cosmos.outputs.cosmosEndpoint
@@ -289,15 +212,6 @@ module uploadWebApp './upload-web-app.bicep' = if (enableUploadWeb) {
 }
 
 var uploadWebAppName = 'verdecora-upload-web-${environment}'
-
-module frontDoor './frontdoor.bicep' = if (enableUploadWeb) {
-  name: 'frontDoor'
-  scope: az.resourceGroup(resourceGroupName)
-  params: {
-    environment: environment
-    backendFqdn: enableUploadWeb ? uploadWebApp.outputs.uploadWebFqdn : ''
-  }
-}
 
 module uploadWebAuth './upload-web-auth.bicep' = if (enableUploadWebAuth && !empty(uploadWebEntraClientId)) {
   name: 'uploadWebAuth'
@@ -368,9 +282,6 @@ module alerts './alerts.bicep' = {
 
 @description('Resource group id.')
 output resourceGroupId string = rg.outputs.resourceGroupId
-
-@description('Virtual network id.')
-output virtualNetworkId string = network.outputs.virtualNetworkId
 
 @description('Service Bus namespace id.')
 output serviceBusNamespaceId string = serviceBus.outputs.serviceBusNamespaceId
@@ -471,12 +382,6 @@ output containerAppsEnvironmentId string = containerApps.outputs.managedEnvironm
 @description('Container Apps environment default domain.')
 output containerAppsEnvironmentDefaultDomain string = containerApps.outputs.managedEnvironmentDefaultDomain
 
-@description('GitHub runner ACA environment name.')
-output runnersEnvironmentName string = runners.outputs.runnerEnvironmentName
-
-@description('GitHub runner ACA job name.')
-output runnersJobName string = runners.outputs.runnerJobName
-
 @description('Main orchestrator container app id.')
 output orchestratorAppId string = containerApps.outputs.orchestratorAppId
 
@@ -491,18 +396,6 @@ output escalationTimerJobId string = containerApps.outputs.escalationTimerJobId
 
 @description('Upload-web container app id.')
 output uploadWebAppId string = enableUploadWeb ? uploadWebApp.outputs.uploadWebAppId : ''
-
-@description('Front Door endpoint hostname for upload-web.')
-output frontDoorEndpointHostname string = enableUploadWeb ? frontDoor.outputs.frontDoorEndpointHostname : ''
-
-@description('Front Door profile resource id.')
-output frontDoorProfileId string = enableUploadWeb ? frontDoor.outputs.frontDoorProfileId : ''
-
-@description('WAF policy resource id.')
-output wafPolicyId string = enableUploadWeb ? frontDoor.outputs.wafPolicyId : ''
-
-@description('Whether production-only network hardening is enabled.')
-output networkHardeningEnabled bool = enableNetworkHardening
 
 @description('Event Grid system topic id.')
 output eventGridSystemTopicId string = eventGrid.outputs.systemTopicId

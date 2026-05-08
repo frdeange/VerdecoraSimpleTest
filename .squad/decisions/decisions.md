@@ -40,3 +40,24 @@
 4. Open required PaaS services safely
 5. Simplify ACA environments
 6. Validate upload-web end to end
+
+---
+
+## Entry: User directive — DevOps methodology
+**Date:** 2026-05-08T14:00:32.542+02:00  
+**Author:** Kiko de Angel (via Copilot directive)
+
+### Decision
+
+Follow strict DevOps methodology:
+- Create GitHub issues for all tasks
+- Work in branches
+- Proper CI/CD pipeline
+- Pull requests for all changes
+- Build and publish workflows
+- Azure CLI logged in as admin@gpsazure.com
+- Use Azure MCP tools when available
+
+### Rationale
+
+User request — establish process discipline and team memory.
