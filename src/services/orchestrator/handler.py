@@ -86,6 +86,12 @@ def _request_from_forwarded_message(payload: Any) -> OrchestrationRequest:
             "event_time": forwarded.event_time.isoformat(),
         }
     )
+    if forwarded.upload_session_id:
+        metadata["upload_session_id"] = forwarded.upload_session_id
+    if forwarded.uploader_oid:
+        metadata["uploader_oid"] = forwarded.uploader_oid
+    if forwarded.uploader_name:
+        metadata["uploader_name"] = forwarded.uploader_name
     return OrchestrationRequest(
         processing_id=forwarded.albaran_id,
         blob_url=forwarded.blob_url,

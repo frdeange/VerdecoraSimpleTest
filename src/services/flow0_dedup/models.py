@@ -93,6 +93,7 @@ class ProcessingRecord(BaseModel):
     source_metadata: dict[str, Any] = Field(default_factory=dict)
     upload_session_id: str | None = None
     uploader_oid: str | None = None
+    uploader_name: str | None = None
 
 
 class ForwardedExtractionMessage(BaseModel):
@@ -113,4 +114,5 @@ class ForwardedExtractionMessage(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     upload_session_id: str | None = None
     uploader_oid: str | None = None
+    uploader_name: str | None = None
     albaran_group: str | None = None

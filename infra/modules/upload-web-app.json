@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "4727277532318629891"
+      "templateHash": "16095119262093221612"
     }
   },
   "parameters": {
@@ -52,11 +52,71 @@
         "description": "Application Insights connection string injected into upload-web."
       }
     },
+    "docIntellEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "Document Intelligence endpoint exposed to upload-web."
+      }
+    },
+    "keyVaultUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Key Vault endpoint exposed to upload-web."
+      }
+    },
+    "serviceBusNamespaceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Service Bus namespace name used by upload-web."
+      }
+    },
     "uploadWebImage": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
         "description": "Optional override for the upload-web image."
+      }
+    },
+    "enableAuth": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable Easy Auth deployment for upload-web."
+      }
+    },
+    "entraTenantId": {
+      "type": "string",
+      "defaultValue": "[subscription().tenantId]",
+      "metadata": {
+        "description": "Microsoft Entra tenant id used by upload-web Easy Auth."
+      }
+    },
+    "entraClientId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Microsoft Entra application client id used by upload-web Easy Auth."
+      }
+    },
+    "entraClientSecret": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Microsoft Entra application client secret used by upload-web Easy Auth."
+      }
+    },
+    "allowedAudiences": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Optional audiences accepted by upload-web Easy Auth. Defaults to api://{entraClientId}."
+      }
+    },
+    "allowedGroupObjectIds": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Optional Microsoft Entra group object ids allowed to access upload-web."
       }
     }
   },
@@ -68,13 +128,16 @@
       "managed-by": "bicep"
     },
     "managedEnvironmentName": "[format('acae-upload-web-{0}', parameters('environment'))]",
-    "resolvedUploadWebImage": "[if(empty(parameters('uploadWebImage')), format('{0}/verdecora-upload-web:latest', parameters('acrLoginServer')), parameters('uploadWebImage'))]",
-    "docIntellEndpoint": "[format('https://verdecora-docintell-{0}.cognitiveservices.azure.com/', parameters('environment'))]",
-    "keyVaultUrl": "[format('https://kv-albaranes-{0}.vault.azure.net/', parameters('environment'))]",
+    "resolvedUploadWebImage": "[if(empty(parameters('uploadWebImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('uploadWebImage'))]",
+    "useAcrRegistry": "[not(empty(parameters('uploadWebImage')))]",
     "rawBlobContainerName": "albaranes-raw",
-    "serviceBusFullyQualifiedNamespace": "[format('sb-albaranes-{0}.servicebus.windows.net', parameters('environment'))]",
-    "serviceBusTopicName": "albaran-events",
-    "uploadSessionsContainerName": "upload-sessions"
+    "serviceBusFullyQualifiedNamespace": "[format('{0}.servicebus.windows.net', parameters('serviceBusNamespaceName'))]",
+    "extractionQueueName": "extraccion-queue",
+    "uploadSessionsContainerName": "upload-sessions",
+    "authSecretName": "microsoft-provider-authentication-secret",
+    "authEnabled": "[and(and(parameters('enableAuth'), not(empty(parameters('entraClientId')))), not(empty(parameters('entraClientSecret'))))]",
+    "resolvedAllowedAudiences": "[if(empty(parameters('allowedAudiences')), createArray(format('api://{0}', parameters('entraClientId'))), parameters('allowedAudiences'))]",
+    "aadValidation": "[if(empty(parameters('allowedGroupObjectIds')), createObject('allowedAudiences', variables('resolvedAllowedAudiences')), createObject('allowedAudiences', variables('resolvedAllowedAudiences'), 'defaultAuthorizationPolicy', createObject('allowedPrincipals', createObject('groups', parameters('allowedGroupObjectIds'))), 'jwtClaimChecks', createObject('allowedGroups', parameters('allowedGroupObjectIds'))))]"
   },
   "resources": [
     {
@@ -112,12 +175,8 @@
         "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
         "configuration": {
           "activeRevisionsMode": "Single",
-          "registries": [
-            {
-              "server": "[parameters('acrLoginServer')]",
-              "identity": "system"
-            }
-          ],
+          "secrets": "[if(variables('authEnabled'), createArray(createObject('name', variables('authSecretName'), 'value', parameters('entraClientSecret'))), createArray())]",
+          "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
           "ingress": {
             "external": true,
             "allowInsecure": false,
@@ -148,20 +207,28 @@
                   "value": "[parameters('cosmosEndpoint')]"
                 },
                 {
+                  "name": "DATABASE_NAME",
+                  "value": "albaranes-db"
+                },
+                {
+                  "name": "COSMOS_DATABASE",
+                  "value": "albaranes-db"
+                },
+                {
                   "name": "DOCINTELL_ENDPOINT",
-                  "value": "[variables('docIntellEndpoint')]"
+                  "value": "[parameters('docIntellEndpoint')]"
                 },
                 {
                   "name": "SERVICEBUS_FQ_NAMESPACE",
                   "value": "[variables('serviceBusFullyQualifiedNamespace')]"
                 },
                 {
-                  "name": "SERVICEBUS_TOPIC",
-                  "value": "[variables('serviceBusTopicName')]"
+                  "name": "SERVICEBUS_EXTRACTION_QUEUE",
+                  "value": "[variables('extractionQueueName')]"
                 },
                 {
                   "name": "KEY_VAULT_URL",
-                  "value": "[variables('keyVaultUrl')]"
+                  "value": "[parameters('keyVaultUrl')]"
                 },
                 {
                   "name": "AZURE_TENANT_ID",
@@ -197,6 +264,48 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]"
+      ]
+    },
+    {
+      "condition": "[variables('authEnabled')]",
+      "type": "Microsoft.App/containerApps/authConfigs",
+      "apiVersion": "2025-01-01",
+      "name": "[format('{0}/{1}', format('verdecora-upload-web-{0}', parameters('environment')), 'current')]",
+      "properties": {
+        "platform": {
+          "enabled": true
+        },
+        "globalValidation": {
+          "redirectToProvider": "azureActiveDirectory",
+          "unauthenticatedClientAction": "RedirectToLoginPage"
+        },
+        "httpSettings": {
+          "requireHttps": true
+        },
+        "identityProviders": {
+          "azureActiveDirectory": {
+            "enabled": true,
+            "login": {
+              "loginParameters": [
+                "scope=openid profile email"
+              ]
+            },
+            "registration": {
+              "clientId": "[parameters('entraClientId')]",
+              "clientSecretSettingName": "[variables('authSecretName')]",
+              "openIdIssuer": "[format('{0}{1}/v2.0', environment().authentication.loginEndpoint, parameters('entraTenantId'))]"
+            },
+            "validation": "[variables('aadValidation')]"
+          }
+        },
+        "login": {
+          "tokenStore": {
+            "enabled": true
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/containerApps', format('verdecora-upload-web-{0}', parameters('environment')))]"
       ]
     }
   ],

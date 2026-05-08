@@ -41,9 +41,9 @@ class UploadWebSettings(BaseSettings):
         default="",
         validation_alias=AliasChoices("SERVICEBUS_FQ_NAMESPACE", "SERVICEBUS_NAMESPACE"),
     )
-    servicebus_topic: str = Field(
-        default="albaran-processing",
-        validation_alias=AliasChoices("SERVICEBUS_TOPIC"),
+    extraction_queue_name: str = Field(
+        default="extraccion-queue",
+        validation_alias=AliasChoices("SERVICEBUS_EXTRACTION_QUEUE", "EXTRACTION_QUEUE_NAME"),
     )
     cosmos_database: str = Field(
         default="verdecora",
