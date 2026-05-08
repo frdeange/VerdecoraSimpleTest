@@ -157,9 +157,75 @@ def test_my_uploads_page_uses_relative_routes() -> None:
 
     assert response.status_code == 200
     assert 'href="/mis-albaranes"' in response.text
-    assert 'hx-get="/mis-albaranes/filter?status_filter=created"' in response.text
-    assert 'hx-get="/mis-albaranes/filter?status_filter=preflight"' in response.text
+    assert 'href="/mis-albaranes?status=created"' in response.text
+    assert 'href="/mis-albaranes?status=preflight"' in response.text
+    assert "border-[var(--vc-primary)] bg-[var(--vc-primary)] text-white shadow-sm" in response.text
     assert f"window.location='/upload/{session_id}/status'" in response.text
     assert "Proveedor Test" in response.text
     assert "ALB-001" in response.text
     assert "Preflight" in response.text
+
+
+@pytest.mark.unit
+def test_my_uploads_page_applies_status_filter_and_highlights_active_button() -> None:
+    app = create_app()
+
+    with TestClient(app) as client:
+        headers = _auth_headers("Parker Flow")
+        client.get("/upload", headers=headers)
+        client.get("/upload", headers=headers)
+
+        sessions = upload_session.get_all_user_sessions("oid-123")
+        assert len(sessions) == 2
+        created_session, preflight_session = sessions
+
+        created_session.files.append(
+            UploadFile(
+                file_id="file-created",
+                filename="created.pdf",
+                blob_path=f"{created_session.session_id}/created.pdf",
+                content_type="application/pdf",
+                size_bytes=512,
+            )
+        )
+        upload_session.update_upload_session(created_session)
+
+        preflight_session.files.append(
+            UploadFile(
+                file_id="file-preflight",
+                filename="preflight.pdf",
+                blob_path=f"{preflight_session.session_id}/preflight.pdf",
+                content_type="application/pdf",
+                size_bytes=1024,
+            )
+        )
+        preflight_session.status = "preflight"
+        preflight_session.preflight = PreflightSummary(
+            detected_supplier="Proveedor Test",
+            detected_date="08/05/2026",
+            detected_albaran_number="ALB-001",
+        )
+        upload_session.update_upload_session(preflight_session)
+
+        response = client.get("/mis-albaranes?status=preflight", headers=headers)
+
+    assert response.status_code == 200
+    assert "preflight.pdf" in response.text
+    assert "created.pdf" not in response.text
+    assert 'href="/mis-albaranes?status=preflight"' in response.text
+    assert "border-[var(--vc-primary)] bg-[var(--vc-primary)] text-white shadow-sm" in response.text
+
+
+@pytest.mark.unit
+def test_my_uploads_filter_route_redirects_to_canonical_status_query() -> None:
+    app = create_app()
+
+    with TestClient(app) as client:
+        response = client.get(
+            "/mis-albaranes/filter?status_filter=preflight",
+            headers=_auth_headers(),
+            follow_redirects=False,
+        )
+
+    assert response.status_code == 307
+    assert response.headers["location"] == "/mis-albaranes?status=preflight"
