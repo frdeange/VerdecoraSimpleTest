@@ -43,21 +43,51 @@
 
 ---
 
-## Entry: User directive — DevOps methodology
-**Date:** 2026-05-08T14:00:32.542+02:00  
-**Author:** Kiko de Angel (via Copilot directive)
+## Entry: Delete Private-Network Bicep Modules
+**Date:** 2026-05-08T14:00:00+02:00  
+**Author:** Parker (IaC Expert)  
+**Issue:** #1
 
-### Decision
+### Summary
+Executed deletion of 5 Bicep network modules and associated GitHub runner Dockerfile as planned in Ripley's simplification decision.
 
-Follow strict DevOps methodology:
-- Create GitHub issues for all tasks
-- Work in branches
-- Proper CI/CD pipeline
-- Pull requests for all changes
-- Build and publish workflows
-- Azure CLI logged in as admin@gpsazure.com
-- Use Azure MCP tools when available
+### Actions Taken
+- Deleted `infra/modules/network.bicep`
+- Deleted `infra/modules/private-endpoints.bicep`
+- Deleted `infra/modules/nat-gateway.bicep`
+- Deleted `infra/modules/runners.bicep`
+- Deleted `infra/modules/frontdoor.bicep`
+- Deleted `infra/Dockerfile.github-runner`
+- Cleaned `infra/main.bicep` to remove module references
 
-### Rationale
+### Outcome
+- 5 Bicep modules removed from IaC
+- main.bicep updated to remove module calls
+- GitHub runner Dockerfile deleted
+- PR #8 created with all changes
+- Network infrastructure files no longer in repo
 
-User request — establish process discipline and team memory.
+---
+
+## Entry: Redesign CI/CD for GitHub-Hosted Runners + OIDC
+**Date:** 2026-05-08T14:00:00+02:00  
+**Author:** Dallas (DevOps)  
+**Issue:** #4
+
+### Summary
+Redesigned 4 CI/CD workflows to use GitHub-hosted `ubuntu-latest` runners with GitHub OIDC federation for Azure authentication. Removed all self-hosted runner dependencies.
+
+### Actions Taken
+- Updated `.github/workflows/build-deploy.yml` for ubuntu-latest + OIDC
+- Updated `.github/workflows/ci.yml` for ubuntu-latest + OIDC
+- Updated `.github/workflows/bicep-validate.yml` for ubuntu-latest + OIDC
+- Updated `.github/workflows/upload-web-ci.yml` for ubuntu-latest + OIDC
+- Configured GitHub OIDC provider federation with Azure
+- Replaced long-lived secrets with short-lived token auth
+
+### Outcome
+- 4 workflows redesigned for GitHub-hosted runners
+- OIDC federation established for Azure deployment authentication
+- No long-lived secrets in CI/CD pipeline
+- PR #9 created with all workflow changes
+- Self-hosted runner infrastructure no longer needed in CI/CD
