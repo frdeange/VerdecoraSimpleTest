@@ -23,7 +23,7 @@ from src.services.hitl_webform.callbacks import HITLCallbackHandler
 
 logger = logging.getLogger(__name__)
 
-HITL_DECISIONS_SUBSCRIPTION = "orchestrator-hitl"
+HITL_DECISIONS_SUBSCRIPTION = "orchestrator-sub"
 HITL_DECISIONS_TOPIC = "hitl-decisions"
 
 

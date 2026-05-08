@@ -476,6 +476,10 @@ resource escalationTimerJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkload
               value: acsEndpoint
             }
             {
+              name: 'ACS_SENDER_ADDRESS'
+              value: acsSenderAddress
+            }
+            {
               name: 'SERVICE_BUS_NAMESPACE'
               value: serviceBusNamespaceName
             }
