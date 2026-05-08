@@ -18,27 +18,12 @@ from src.shared.auth.entra import (
     build_authenticated_user_from_easy_auth_headers,
 )
 from src.upload_web.config import UploadWebSettings
+from src.upload_web.middleware.security_headers import build_security_headers
 
 SESSION_COOKIE_NAME = "upload_web_session"
 IDLE_TIMEOUT = timedelta(minutes=30)
 ABSOLUTE_SESSION_TIMEOUT = timedelta(hours=8)
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
-SECURITY_HEADERS = {
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-    "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Content-Security-Policy": (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data:; "
-        "connect-src 'self'; "
-        "frame-ancestors 'none'; "
-        "base-uri 'self'; "
-        "form-action 'self' https://login.microsoftonline.com"
-    ),
-}
 EXEMPT_PATH_PREFIXES = ("/static", "/.auth")
 EXEMPT_PATHS = {"/", "/login", "/healthz", "/readyz", "/logout"}
 
@@ -171,6 +156,7 @@ class SessionSecurityMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: Any, *, settings: UploadWebSettings) -> None:
         super().__init__(app)
         self._manager = SessionSecurityManager(settings)
+        self._security_headers = build_security_headers(settings.blob_account)
 
     async def dispatch(  # noqa: C901
         self,
@@ -190,9 +176,13 @@ class SessionSecurityMiddleware(BaseHTTPMiddleware):
 
         if existing_payload is not None:
             if self._manager.is_expired(existing_payload, now):
-                return _apply_security_headers(RedirectResponse(url="/logout?reason=expired", status_code=307))
+                return _apply_security_headers(
+                    RedirectResponse(url="/logout?reason=expired", status_code=307), self._security_headers
+                )
             if not _is_exempt_path(path) and self._manager.is_idle(existing_payload, now):
-                return _apply_security_headers(RedirectResponse(url="/logout?reason=idle", status_code=307))
+                return _apply_security_headers(
+                    RedirectResponse(url="/logout?reason=idle", status_code=307), self._security_headers
+                )
 
         resolved_payload: SessionCookiePayload | None = None
         resolved_user: AuthenticatedUser | None = None
@@ -200,7 +190,9 @@ class SessionSecurityMiddleware(BaseHTTPMiddleware):
         resolved_user, token_expiry = _resolve_authenticated_user(request)
         if resolved_user is not None:
             if token_expiry is not None and now.timestamp() >= token_expiry:
-                return _apply_security_headers(RedirectResponse(url="/logout?reason=expired", status_code=307))
+                return _apply_security_headers(
+                    RedirectResponse(url="/logout?reason=expired", status_code=307), self._security_headers
+                )
             resolved_payload = self._manager.build_payload(
                 resolved_user,
                 now,
@@ -221,14 +213,14 @@ class SessionSecurityMiddleware(BaseHTTPMiddleware):
                 response = JSONResponse(
                     {"detail": "CSRF token validation failed."}, status_code=status.HTTP_403_FORBIDDEN
                 )
-                return _apply_security_headers(response)
+                return _apply_security_headers(response, self._security_headers)
 
         response = await call_next(request)
 
         if resolved_payload is not None:
             self._manager.set_session_cookie(response, resolved_payload)
 
-        return _apply_security_headers(response)
+        return _apply_security_headers(response, self._security_headers)
 
 
 async def get_upload_current_user(
@@ -268,8 +260,8 @@ def build_logout_redirect(reason: str | None = None, settings: UploadWebSettings
     return f"/.auth/logout?{query}"
 
 
-def _apply_security_headers(response: Response) -> Response:
-    for header_name, header_value in SECURITY_HEADERS.items():
+def _apply_security_headers(response: Response, security_headers: dict[str, str]) -> Response:
+    for header_name, header_value in security_headers.items():
         response.headers[header_name] = header_value
     return response
 

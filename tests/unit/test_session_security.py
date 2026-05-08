@@ -22,7 +22,7 @@ TEST_SIGNING_KEY = "test-session-signing-key-with-at-least-thirty-two-bytes"
 
 
 def _settings() -> UploadWebSettings:
-    return UploadWebSettings(session_signing_key=TEST_SIGNING_KEY)
+    return UploadWebSettings(session_signing_key=TEST_SIGNING_KEY, blob_account="")
 
 
 def _build_client() -> TestClient:
@@ -156,6 +156,23 @@ def test_security_headers_are_set() -> None:
         "base-uri 'self'; "
         "form-action 'self' https://login.microsoftonline.com"
     )
+
+
+@pytest.mark.unit
+def test_security_headers_include_blob_storage_origin() -> None:
+    settings = UploadWebSettings(
+        session_signing_key=TEST_SIGNING_KEY,
+        blob_account="https://stvdsdev4vtapr.blob.core.windows.net/upload-web-sas/",
+    )
+    app = create_app(settings)
+
+    with TestClient(app, base_url="https://testserver") as client:
+        response = client.get("/healthz")
+
+    assert response.status_code == 200
+    assert "connect-src 'self' https://stvdsdev4vtapr.blob.core.windows.net;" in response.headers[
+        "Content-Security-Policy"
+    ]
 
 
 @pytest.mark.unit
