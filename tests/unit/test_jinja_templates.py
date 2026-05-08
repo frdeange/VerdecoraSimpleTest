@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from src.upload_web.app import create_app
 from src.upload_web.config import UploadWebSettings
-from src.upload_web.models.upload import UploadFile
+from src.upload_web.models.upload import PreflightSummary, UploadFile
 from src.upload_web.services import upload_session
 
 
@@ -142,10 +142,21 @@ def test_my_uploads_page_uses_relative_routes() -> None:
                 size_bytes=1024,
             )
         )
+        session.status = "preflight"
+        session.preflight = PreflightSummary(
+            detected_supplier="Proveedor Test",
+            detected_date="08/05/2026",
+            detected_albaran_number="ALB-001",
+        )
+        upload_session.update_upload_session(session)
 
         response = client.get("/mis-albaranes", headers=headers)
 
     assert response.status_code == 200
     assert 'href="/mis-albaranes"' in response.text
     assert 'hx-get="/mis-albaranes/filter?status_filter=created"' in response.text
+    assert 'hx-get="/mis-albaranes/filter?status_filter=preflight"' in response.text
     assert f"window.location='/upload/{session_id}/status'" in response.text
+    assert "Proveedor Test" in response.text
+    assert "ALB-001" in response.text
+    assert "Preflight" in response.text
