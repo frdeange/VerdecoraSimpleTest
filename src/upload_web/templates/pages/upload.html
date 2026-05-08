@@ -4,18 +4,18 @@
 <link rel="stylesheet" href="/static/css/upload.css">
 
 {# Step indicator #}
-<div class="step-indicator">
-  <div class="step active">
+<div class="step-indicator" id="upload-stepper">
+  <div class="step active" data-step="1">
     <span class="step-number">1</span>
     <span>Archivos</span>
   </div>
   <div class="step-divider"></div>
-  <div class="step">
+  <div class="step" data-step="2">
     <span class="step-number">2</span>
     <span>Análisis</span>
   </div>
   <div class="step-divider"></div>
-  <div class="step">
+  <div class="step" data-step="3">
     <span class="step-number">3</span>
     <span>Confirmar</span>
   </div>
@@ -57,20 +57,20 @@
               type="button"
               class="btn-primary"
               disabled
-              hx-post="/api/sessions/{{ session_id | default('') }}/preflight"
-              hx-target="#preflight-results"
-              hx-swap="outerHTML"
-              hx-indicator="#preflight-loading">
+              data-session-id="{{ session_id | default('') }}"
+              data-preflight-url="/api/sessions/{{ session_id | default('') }}/preflight"
+              data-confirm-url="/api/sessions/{{ session_id | default('') }}/confirm"
+              data-status-url="/upload/{{ session_id | default('') }}/status">
         <span class="htmx-hide-on-request">Siguiente: Analizar →</span>
         <span class="htmx-indicator"><span class="spinner"></span>&nbsp;Analizando…</span>
       </button>
     </div>
-    <div id="preflight-loading" class="htmx-indicator mt-3 text-sm text-slate-500">
+    <div id="preflight-loading" class="preflight-loading mt-3 text-sm text-slate-500">
       <span class="spinner"></span>&nbsp;Preparando análisis…
     </div>
 
     {# Preflight results placeholder #}
-    <div id="preflight-results"></div>
+    <div id="preflight-results" class="preflight-results" hidden aria-live="polite"></div>
 
   </article>
 

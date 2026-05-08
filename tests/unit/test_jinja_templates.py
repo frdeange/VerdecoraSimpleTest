@@ -117,8 +117,11 @@ def test_upload_page_creates_session_and_binds_preflight_urls() -> None:
 
     assert f'data-session-id="{session_id}"' in response.text
     assert 'href="/dashboard"' in response.text
-    assert f'hx-post="/api/sessions/{session_id}/preflight"' in response.text
+    assert f'data-preflight-url="/api/sessions/{session_id}/preflight"' in response.text
+    assert f'data-confirm-url="/api/sessions/{session_id}/confirm"' in response.text
+    assert f'data-status-url="/upload/{session_id}/status"' in response.text
     assert 'id="preflight-loading"' in response.text
+    assert 'id="preflight-results"' in response.text
 
 
 @pytest.mark.unit

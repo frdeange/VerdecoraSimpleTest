@@ -23,6 +23,9 @@
   const UPLOAD_STATE_UPLOADING = "uploading";
   const UPLOAD_STATE_COMPLETE = "complete";
   const UPLOAD_STATE_ERROR = "error";
+  const STEP_FILES = 1;
+  const STEP_ANALYSIS = 2;
+  const STEP_CONFIRM = 3;
 
   /**
    * Return CSRF token from <meta> tag.
@@ -102,6 +105,236 @@
       e.dataTransfer.setData("text/plain", item.dataset.fileId);
     });
     item.dataset.dragBound = "true";
+  }
+
+  function getStepElements() {
+    return Array.from(document.querySelectorAll("#upload-stepper .step[data-step]"));
+  }
+
+  function setActiveStep(stepNumber) {
+    getStepElements().forEach(function (step) {
+      const currentStep = Number(step.dataset.step || "0");
+      step.classList.remove("active", "completed");
+
+      if (currentStep < stepNumber) {
+        step.classList.add("completed");
+      } else if (currentStep === stepNumber) {
+        step.classList.add("active");
+      }
+    });
+  }
+
+  function setButtonLoading(button, isLoading) {
+    if (!button) return;
+
+    if (isLoading) {
+      button.dataset.wasDisabled = button.disabled ? "true" : "false";
+      button.disabled = true;
+    } else {
+      button.disabled = button.dataset.wasDisabled === "true";
+      delete button.dataset.wasDisabled;
+    }
+
+    button.classList.toggle("is-loading", isLoading);
+    button.setAttribute("aria-busy", isLoading ? "true" : "false");
+  }
+
+  function setInlineLoading(isLoading, message) {
+    const loadingEl = document.getElementById("preflight-loading");
+    if (!loadingEl) return;
+
+    loadingEl.style.display = isLoading ? "inline-flex" : "none";
+    if (message) {
+      loadingEl.innerHTML = '<span class="spinner"></span>&nbsp;' + message;
+    }
+  }
+
+  function getConfidenceTone(confidence) {
+    if (confidence > 0.7) return "success";
+    if (confidence >= 0.3) return "warning";
+    return "error";
+  }
+
+  function getConfidenceBadgeClass(confidence) {
+    if (confidence > 0.7) return "confidence-high";
+    if (confidence >= 0.3) return "confidence-medium";
+    return "confidence-low";
+  }
+
+  function createElement(tagName, className, text) {
+    const el = document.createElement(tagName);
+    if (className) {
+      el.className = className;
+    }
+    if (typeof text === "string") {
+      el.textContent = text;
+    }
+    return el;
+  }
+
+  function createResultField(label, value) {
+    const field = createElement("div", "preflight-results-field");
+    const dt = createElement("dt", "preflight-results-label", label);
+    const dd = createElement("dd", "preflight-results-value", value);
+    field.appendChild(dt);
+    field.appendChild(dd);
+    return field;
+  }
+
+  function renderWarnings(warnings) {
+    if (!warnings || warnings.length === 0) {
+      return null;
+    }
+
+    const warningBox = createElement("div", "preflight-warning-box");
+    const title = createElement("p", "preflight-warning-title", "Avisos detectados");
+    const list = createElement("ul", "preflight-warning-list");
+
+    warnings.forEach(function (warning) {
+      const item = createElement("li", "preflight-warning-item", warning);
+      list.appendChild(item);
+    });
+
+    warningBox.appendChild(title);
+    warningBox.appendChild(list);
+    return warningBox;
+  }
+
+  function renderMessageCard(message, tone) {
+    const resultsEl = document.getElementById("preflight-results");
+    if (!resultsEl) return;
+
+    resultsEl.hidden = false;
+    resultsEl.innerHTML = "";
+
+    const card = createElement("section", "preflight-results-card result-card " + tone);
+    const body = createElement("p", "preflight-message", message);
+    card.appendChild(body);
+    resultsEl.appendChild(card);
+  }
+
+  async function confirmSession(confirmButton, confirmUrl, statusUrl) {
+    const resultsEl = document.getElementById("preflight-results");
+    const preflightButton = document.getElementById("btn-next-preflight");
+
+    try {
+      setActiveStep(STEP_CONFIRM);
+      setButtonLoading(confirmButton, true);
+      if (preflightButton) {
+        preflightButton.disabled = true;
+      }
+
+      const resp = await fetch(confirmUrl, {
+        method: "POST",
+        headers: {
+          "X-CSRF-Token": getCsrfToken(),
+        },
+      });
+
+      if (!resp.ok) {
+        let message = "No se pudo confirmar el albarán.";
+        try {
+          const errorBody = await resp.json();
+          if (errorBody && errorBody.detail) {
+            message = errorBody.detail;
+          }
+        } catch (error) {
+          console.warn("Could not parse confirm error response.", error);
+        }
+        throw new Error(message);
+      }
+
+      if (statusUrl) {
+        window.location.assign(statusUrl);
+      }
+    } catch (error) {
+      if (resultsEl) {
+        const existingError = resultsEl.querySelector(".preflight-inline-error");
+        if (existingError) {
+          existingError.remove();
+        }
+        const errorMessage = createElement(
+          "p",
+          "preflight-inline-error",
+          error.message || "No se pudo confirmar el albarán."
+        );
+        resultsEl.appendChild(errorMessage);
+      }
+      setActiveStep(STEP_ANALYSIS);
+      if (preflightButton) {
+        updateFileCount();
+      }
+    } finally {
+      setButtonLoading(confirmButton, false);
+    }
+  }
+
+  function renderPreflightResults(result, options) {
+    const resultsEl = document.getElementById("preflight-results");
+    if (!resultsEl) return;
+
+    const confidence = Number(result.confidence || 0);
+    const tone = getConfidenceTone(confidence);
+    const card = createElement("section", "preflight-results-card result-card " + tone);
+    const header = createElement("div", "preflight-results-header");
+    const titleBlock = createElement("div", "preflight-results-heading");
+    const eyebrow = createElement("p", "preflight-results-eyebrow", "Resultado del análisis");
+    const title = createElement(
+      "h2",
+      "preflight-results-title",
+      result.is_albaran ? "✅ Es albarán" : "⚠️ Revisar documento"
+    );
+    const confidenceBadge = createElement(
+      "span",
+      "confidence-badge " + getConfidenceBadgeClass(confidence),
+      "Confianza " + Math.round(confidence * 100) + "%"
+    );
+    const details = createElement("dl", "preflight-results-grid");
+    const actions = createElement("div", "preflight-results-actions");
+    const confirmButton = createElement("button", "btn-primary", "Siguiente: Confirmar →");
+
+    titleBlock.appendChild(eyebrow);
+    titleBlock.appendChild(title);
+    header.appendChild(titleBlock);
+    header.appendChild(confidenceBadge);
+
+    details.appendChild(
+      createResultField("Proveedor", result.detected_supplier || "No detectado")
+    );
+    details.appendChild(
+      createResultField("Fecha", result.detected_date || "No detectada")
+    );
+    details.appendChild(
+      createResultField(
+        "Nº Albarán",
+        result.detected_albaran_number || "No detectado"
+      )
+    );
+    details.appendChild(
+      createResultField("Tienda", result.detected_store || "No detectada")
+    );
+
+    confirmButton.type = "button";
+    confirmButton.addEventListener("click", function () {
+      confirmSession(confirmButton, options.confirmUrl, options.statusUrl);
+    });
+    actions.appendChild(confirmButton);
+
+    card.appendChild(header);
+    card.appendChild(details);
+
+    const warnings = renderWarnings(result.warnings || []);
+    if (warnings) {
+      card.appendChild(warnings);
+    }
+
+    card.appendChild(actions);
+
+    resultsEl.hidden = false;
+    resultsEl.innerHTML = "";
+    resultsEl.appendChild(card);
+    setActiveStep(STEP_ANALYSIS);
+    resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   /**
@@ -373,10 +606,71 @@
     });
   }
 
+  function initPreflightFlow() {
+    const button = document.getElementById("btn-next-preflight");
+    if (!button || button.dataset.bound === "true") {
+      return;
+    }
+
+    const preflightUrl = button.dataset.preflightUrl || "";
+    const confirmUrl = button.dataset.confirmUrl || "";
+    const statusUrl = button.dataset.statusUrl || "";
+
+    button.addEventListener("click", async function () {
+      if (!preflightUrl || button.disabled) {
+        return;
+      }
+
+      try {
+        setButtonLoading(button, true);
+        setInlineLoading(true, "Preparando análisis…");
+
+        const resp = await fetch(preflightUrl, {
+          method: "POST",
+          headers: {
+            "X-CSRF-Token": getCsrfToken(),
+          },
+        });
+
+        if (!resp.ok) {
+          let message = "No se pudo completar el análisis.";
+          try {
+            const errorBody = await resp.json();
+            if (errorBody && errorBody.detail) {
+              message = errorBody.detail;
+            }
+          } catch (error) {
+            console.warn("Could not parse preflight error response.", error);
+          }
+          throw new Error(message);
+        }
+
+        const result = await resp.json();
+        renderPreflightResults(result, {
+          confirmUrl: confirmUrl,
+          statusUrl: statusUrl,
+        });
+      } catch (error) {
+        renderMessageCard(
+          error.message || "No se pudo completar el análisis.",
+          "error"
+        );
+      } finally {
+        setButtonLoading(button, false);
+        setInlineLoading(false);
+        updateFileCount();
+      }
+    });
+
+    button.dataset.bound = "true";
+  }
+
   // Boot
   document.addEventListener("DOMContentLoaded", function () {
     initDropzone();
     initGrouping();
+    initPreflightFlow();
+    setActiveStep(STEP_FILES);
   });
 
   // Re-init after HTMX swaps
