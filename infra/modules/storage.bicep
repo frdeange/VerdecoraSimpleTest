@@ -41,7 +41,8 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 }
 
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
-  name: '${storageAccount.name}/default'
+  parent: storageAccount
+  name: 'default'
   properties: {
     isVersioningEnabled: true
     cors: {
@@ -67,35 +68,35 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01'
 }
 
 resource albaranesRawContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
-  name: '${storageAccount.name}/default/albaranes-raw'
+  parent: blobService
+  name: 'albaranes-raw'
   properties: {
     publicAccess: 'None'
     immutableStorageWithVersioning: {
       enabled: false
     }
-    immutabilityPolicy: {
-      immutabilityPeriodSinceCreationInDays: 30
-      state: 'Unlocked'
-    }
   }
 }
 
 resource albaranesProcessedContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
-  name: '${storageAccount.name}/default/albaranes-processed'
+  parent: blobService
+  name: 'albaranes-processed'
   properties: {
     publicAccess: 'None'
   }
 }
 
 resource dlqContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
-  name: '${storageAccount.name}/default/dlq'
+  parent: blobService
+  name: 'dlq'
   properties: {
     publicAccess: 'None'
   }
 }
 
 resource lifecyclePolicy 'Microsoft.Storage/storageAccounts/managementPolicies@2023-01-01' = {
-  name: '${storageAccount.name}/default'
+  parent: storageAccount
+  name: 'default'
   properties: {
     policy: {
       rules: [
