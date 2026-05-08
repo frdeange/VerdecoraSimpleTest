@@ -41,12 +41,12 @@ resource aiServices 'Microsoft.CognitiveServices/accounts@2025-10-01-preview' = 
   }
   properties: {
     customSubDomainName: aiServicesName
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: 'Enabled'
     disableLocalAuth: true
     allowProjectManagement: true
     networkAcls: {
       bypass: 'AzureServices'
-      defaultAction: 'Deny'
+      defaultAction: 'Allow'
       virtualNetworkRules: []
       ipRules: []
     }
