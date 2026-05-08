@@ -150,12 +150,16 @@ jobs:
             exit 0
           fi
 
+          az containerapp registry set \
+            --name "$ACA_ORCHESTRATOR" \
+            --resource-group "$RESOURCE_GROUP" \
+            --server "$REGISTRY_SERVER" \
+            --identity "system"
+
           az containerapp update \
             --name "$ACA_ORCHESTRATOR" \
             --resource-group "$RESOURCE_GROUP" \
-            --image "$IMAGE_REF" \
-            --registry-server "$REGISTRY_SERVER" \
-            --registry-identity "system"
+            --image "$IMAGE_REF"
 
   build-hitl:
     needs: detect-changes
@@ -206,12 +210,16 @@ jobs:
             exit 0
           fi
 
+          az containerapp registry set \
+            --name "$ACA_HITL" \
+            --resource-group "$RESOURCE_GROUP" \
+            --server "$REGISTRY_SERVER" \
+            --identity "system"
+
           az containerapp update \
             --name "$ACA_HITL" \
             --resource-group "$RESOURCE_GROUP" \
-            --image "$IMAGE_REF" \
-            --registry-server "$REGISTRY_SERVER" \
-            --registry-identity "system"
+            --image "$IMAGE_REF"
 
   build-dedup:
     needs: detect-changes
@@ -262,12 +270,16 @@ jobs:
             exit 0
           fi
 
+          az containerapp job registry set \
+            --name "$ACA_DEDUP" \
+            --resource-group "$RESOURCE_GROUP" \
+            --server "$REGISTRY_SERVER" \
+            --identity "system"
+
           az containerapp job update \
             --name "$ACA_DEDUP" \
             --resource-group "$RESOURCE_GROUP" \
-            --image "$IMAGE_REF" \
-            --registry-server "$REGISTRY_SERVER" \
-            --registry-identity "system"
+            --image "$IMAGE_REF"
 
   build-escalation:
     needs: detect-changes
@@ -318,12 +330,16 @@ jobs:
             exit 0
           fi
 
+          az containerapp job registry set \
+            --name "$ACA_ESCALATION" \
+            --resource-group "$RESOURCE_GROUP" \
+            --server "$REGISTRY_SERVER" \
+            --identity "system"
+
           az containerapp job update \
             --name "$ACA_ESCALATION" \
             --resource-group "$RESOURCE_GROUP" \
-            --image "$IMAGE_REF" \
-            --registry-server "$REGISTRY_SERVER" \
-            --registry-identity "system"
+            --image "$IMAGE_REF"
 
   build-upload-web:
     needs: detect-changes
@@ -374,9 +390,13 @@ jobs:
             exit 0
           fi
 
+          az containerapp registry set \
+            --name "$ACA_UPLOAD_WEB" \
+            --resource-group "$RESOURCE_GROUP" \
+            --server "$REGISTRY_SERVER" \
+            --identity "system"
+
           az containerapp update \
             --name "$ACA_UPLOAD_WEB" \
             --resource-group "$RESOURCE_GROUP" \
-            --image "$IMAGE_REF" \
-            --registry-server "$REGISTRY_SERVER" \
-            --registry-identity "system"
+            --image "$IMAGE_REF"
