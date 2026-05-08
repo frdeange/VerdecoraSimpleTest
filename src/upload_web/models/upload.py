@@ -28,6 +28,7 @@ class UploadFile(BaseModel):
     uploaded_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     albaran_group: str | None = None
     page_number: int = 1
+    processing_status: str | None = None
 
 
 class PreflightSummary(BaseModel):
@@ -47,6 +48,7 @@ class UploadSession(BaseModel):
     user_oid: str
     user_name: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     status: str = "created"
     files: list[UploadFile] = Field(default_factory=list)
     container_name: str = "albaranes-raw"

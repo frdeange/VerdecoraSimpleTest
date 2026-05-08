@@ -34,6 +34,10 @@ class UploadWebSettings(BaseSettings):
         default="upload-sessions",
         validation_alias=AliasChoices("UPLOAD_SESSIONS_CONTAINER"),
     )
+    processing_records_container: str = Field(
+        default="processing-records",
+        validation_alias=AliasChoices("PROCESSING_CONTAINER_NAME", "PROCESSING_RECORDS_CONTAINER"),
+    )
     azure_tenant_id: str = Field(default="", validation_alias=AliasChoices("AZURE_TENANT_ID"))
     key_vault_url: str = Field(default="", validation_alias=AliasChoices("KEY_VAULT_URL"))
     docintell_endpoint: str = Field(default="", validation_alias=AliasChoices("DOCINTELL_ENDPOINT"))
@@ -46,8 +50,8 @@ class UploadWebSettings(BaseSettings):
         validation_alias=AliasChoices("SERVICEBUS_EXTRACTION_QUEUE", "EXTRACTION_QUEUE_NAME"),
     )
     cosmos_database: str = Field(
-        default="verdecora",
-        validation_alias=AliasChoices("COSMOS_DATABASE"),
+        default="albaranes-db",
+        validation_alias=AliasChoices("DATABASE_NAME", "COSMOS_DATABASE", "COSMOS_DATABASE_NAME"),
     )
     session_signing_key: str = Field(
         default="dev-only-upload-web-session-signing-key-change-me",

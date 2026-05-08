@@ -17,7 +17,7 @@ from src.upload_web.models.upload import UploadFile, UploadSession
 from src.upload_web.services.blob_sas import generate_upload_sas_url
 from src.upload_web.services.file_validator import validate_file
 from src.upload_web.services.preflight import run_preflight
-from src.upload_web.services.upload_session import create_upload_session, get_upload_session
+from src.upload_web.services.upload_session import create_upload_session, get_upload_session, update_upload_session
 
 router = APIRouter(prefix="/sessions", tags=["upload-web-api"])
 CurrentUser = Annotated[AuthenticatedUser, Depends(get_upload_current_user)]
@@ -110,6 +110,7 @@ def generate_sas(
 
     if session.status in ("created", "draft"):
         session.status = "uploading"
+        update_upload_session(session)
 
     return {"upload_url": sas_url, "blob_path": blob_path, "expires_in": expires_in}
 
@@ -151,6 +152,7 @@ def register_file(
 
     if session.status in ("created", "draft"):
         session.status = "uploading"
+    update_upload_session(session)
 
     return {"file_id": file_id, "status": "registered"}
 
@@ -199,6 +201,7 @@ def preflight_check(session_id: str, current_user: CurrentUser) -> PreflightResu
         warnings=result.warnings,
     )
     session.status = "preflight"
+    update_upload_session(session)
 
     return result
 
@@ -220,6 +223,7 @@ def confirm_session(session_id: str, current_user: CurrentUser) -> dict[str, Any
 
     session.status = "confirmed"
     session.confirmed_at = datetime.now(UTC)
+    update_upload_session(session)
 
     processing_started = _publish_to_service_bus(session)
 

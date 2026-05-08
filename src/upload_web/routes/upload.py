@@ -8,11 +8,21 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from src.shared.auth.entra import AuthenticatedUser
 from src.upload_web.middleware import get_upload_current_user
-from src.upload_web.services.upload_session import create_upload_session
+from src.upload_web.services.upload_session import create_upload_session, get_all_user_sessions
 
 router = APIRouter(tags=["upload-web"])
 CurrentUser = Annotated[AuthenticatedUser, Depends(get_upload_current_user)]
 POST_LOGIN_REDIRECT_PATH = "/dashboard"
+STATUS_FILTERS = ["created", "uploading", "preflight", "confirmed", "processing", "completed", "failed"]
+STATUS_BADGES = {
+    "created": ("Creado", "bg-slate-100 text-slate-600"),
+    "uploading": ("Subiendo", "bg-sky-100 text-sky-700"),
+    "preflight": ("Preflight", "bg-violet-100 text-violet-700"),
+    "confirmed": ("Confirmado", "bg-amber-100 text-amber-700"),
+    "processing": ("Procesando", "bg-yellow-100 text-yellow-700"),
+    "completed": ("Completado", "bg-green-100 text-green-700"),
+    "failed": ("Error", "bg-red-100 text-red-700"),
+}
 
 
 def _build_template_context(
@@ -33,6 +43,39 @@ def _build_template_context(
 def _microsoft_login_url(request: Request) -> str:
     post_login_redirect_uri = request.app.state.settings.build_public_url(POST_LOGIN_REDIRECT_PATH)
     return f"/.auth/login/aad?{urlencode({'post_login_redirect_uri': post_login_redirect_uri})}"
+
+
+def _build_upload_rows(sessions: list[Any], status_filter: str = "") -> list[dict[str, Any]]:
+    uploads: list[dict[str, Any]] = []
+    for session in sessions:
+        if status_filter and session.status != status_filter:
+            continue
+        status_label, status_classes = STATUS_BADGES.get(
+            session.status, (session.status.capitalize(), "bg-slate-100 text-slate-600")
+        )
+        preflight = session.preflight
+        for upload_file in session.files:
+            uploads.append(
+                {
+                    "session_id": session.session_id,
+                    "filename": upload_file.filename,
+                    "status": session.status,
+                    "status_label": status_label,
+                    "status_classes": status_classes,
+                    "albaran_group": upload_file.albaran_group,
+                    "uploaded_at": upload_file.uploaded_at.strftime("%d/%m/%Y %H:%M"),
+                    "uploaded_at_sort": upload_file.uploaded_at,
+                    "content_type": upload_file.content_type,
+                    "detected_supplier": preflight.detected_supplier if preflight else None,
+                    "detected_date": preflight.detected_date if preflight else None,
+                    "detected_albaran_number": preflight.detected_albaran_number if preflight else None,
+                }
+            )
+
+    uploads.sort(key=lambda item: item["uploaded_at_sort"], reverse=True)
+    for upload in uploads:
+        upload.pop("uploaded_at_sort", None)
+    return uploads
 
 
 @router.get("/", response_class=HTMLResponse, include_in_schema=False, name="index")
@@ -85,22 +128,8 @@ async def upload_page(request: Request, current_user: CurrentUser) -> HTMLRespon
 
 @router.get("/mis-albaranes", response_class=HTMLResponse, name="my_uploads_page")
 async def my_uploads_page(request: Request, current_user: CurrentUser) -> HTMLResponse:
-    from src.upload_web.services.upload_session import get_all_user_sessions
-
     sessions = get_all_user_sessions(current_user.oid)
-    uploads: list[dict[str, Any]] = []
-    for s in sessions:
-        for f in s.files:
-            uploads.append(
-                {
-                    "session_id": s.session_id,
-                    "filename": f.filename,
-                    "status": s.status,
-                    "albaran_group": f.albaran_group,
-                    "uploaded_at": f.uploaded_at.strftime("%d/%m/%Y %H:%M"),
-                    "content_type": f.content_type,
-                }
-            )
+    uploads = _build_upload_rows(sessions)
 
     return request.app.state.templates.TemplateResponse(
         request,
@@ -110,6 +139,7 @@ async def my_uploads_page(request: Request, current_user: CurrentUser) -> HTMLRe
             current_user,
             page_title="Mis albaranes · Verdecora Upload Web",
             uploads=uploads,
+            status_options=STATUS_FILTERS,
         ),
     )
 
@@ -120,24 +150,8 @@ async def my_uploads_filter(
     current_user: CurrentUser,
     status_filter: str = "",
 ) -> HTMLResponse:
-    from src.upload_web.services.upload_session import get_all_user_sessions
-
     sessions = get_all_user_sessions(current_user.oid)
-    uploads: list[dict[str, Any]] = []
-    for s in sessions:
-        if status_filter and s.status != status_filter:
-            continue
-        for f in s.files:
-            uploads.append(
-                {
-                    "session_id": s.session_id,
-                    "filename": f.filename,
-                    "status": s.status,
-                    "albaran_group": f.albaran_group,
-                    "uploaded_at": f.uploaded_at.strftime("%d/%m/%Y %H:%M"),
-                    "content_type": f.content_type,
-                }
-            )
+    uploads = _build_upload_rows(sessions, status_filter)
 
     return request.app.state.templates.TemplateResponse(
         request,
@@ -148,6 +162,7 @@ async def my_uploads_filter(
             page_title="Mis albaranes · Verdecora Upload Web",
             uploads=uploads,
             status_filter=status_filter,
+            status_options=STATUS_FILTERS,
         ),
     )
 

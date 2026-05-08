@@ -14,7 +14,7 @@
                 {% if not status_filter %}bg-[var(--vc-primary)] text-white{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">
         Todos
       </a>
-      {% for st in ['created', 'uploading', 'confirmed', 'processing', 'completed', 'failed'] %}
+      {% for st in status_options %}
       <a hx-get="/mis-albaranes/filter?status_filter={{ st }}"
          hx-target="#uploads-table"
          hx-swap="innerHTML"
@@ -35,6 +35,9 @@
             <th class="pb-3 pr-4">Fecha</th>
             <th class="pb-3 pr-4">Archivo</th>
             <th class="pb-3 pr-4">Grupo albarán</th>
+            <th class="pb-3 pr-4">Proveedor</th>
+            <th class="pb-3 pr-4">Fecha doc.</th>
+            <th class="pb-3 pr-4">Nº albarán</th>
             <th class="pb-3">Estado</th>
           </tr>
         </thead>
@@ -45,16 +48,11 @@
             <td class="py-3 pr-4 text-slate-600">{{ u.uploaded_at }}</td>
             <td class="py-3 pr-4 font-medium text-slate-900">{{ u.filename }}</td>
             <td class="py-3 pr-4 text-slate-600">{{ u.albaran_group or '—' }}</td>
+            <td class="py-3 pr-4 text-slate-600">{{ u.detected_supplier or '—' }}</td>
+            <td class="py-3 pr-4 text-slate-600">{{ u.detected_date or '—' }}</td>
+            <td class="py-3 pr-4 text-slate-600">{{ u.detected_albaran_number or '—' }}</td>
             <td class="py-3">
-              {% if u.status == 'completed' %}
-                <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">Completado</span>
-              {% elif u.status == 'confirmed' or u.status == 'processing' %}
-                <span class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-700">En proceso</span>
-              {% elif u.status == 'failed' %}
-                <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">Error</span>
-              {% else %}
-                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">{{ u.status | capitalize }}</span>
-              {% endif %}
+              <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ u.status_classes }}">{{ u.status_label }}</span>
             </td>
           </tr>
           {% endfor %}
