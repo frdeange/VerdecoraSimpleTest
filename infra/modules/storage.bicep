@@ -15,8 +15,8 @@ var tags = {
   'managed-by': 'bicep'
 }
 
-var storageBaseName = 'st-albaranes-${environment}'
-var storageAccountName = toLower(replace(storageBaseName, '-', ''))
+var uniqueSuffix = substring(uniqueString(subscription().subscriptionId, 'verdecora-simple', environment), 0, 6)
+var storageAccountName = 'stvds${environment}${uniqueSuffix}'
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: storageAccountName

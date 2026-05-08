@@ -13,8 +13,9 @@ var tags = {
   'managed-by': 'bicep'
 }
 
-var communicationServiceName = 'verdecora-acs-${environment}'
-var emailServiceName = 'verdecora-email-${environment}'
+var uniqueSuffix = substring(uniqueString(subscription().subscriptionId, 'verdecora-simple', environment), 0, 6)
+var communicationServiceName = 'vds-acs-${environment}-${uniqueSuffix}'
+var emailServiceName = 'vds-email-${environment}-${uniqueSuffix}'
 var azureManagedDomainResourceName = 'AzureManagedDomain'
 
 resource emailService 'Microsoft.Communication/emailServices@2023-04-01' = {

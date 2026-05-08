@@ -60,6 +60,9 @@ param hitlWebformImage string = ''
 @description('Optional override for the escalation timer ACA Job image.')
 param escalationTimerJobImage string = ''
 
+@description('Deploy Container App workloads (apps/jobs). Disable for infrastructure-only rollouts before application images exist.')
+param enableWorkloads bool = false
+
 @description('Optional override for the reconciliation ACA Job image.')
 param reconciliationJobImage string = ''
 
@@ -103,7 +106,7 @@ resource managedEnvironment 'Microsoft.App/managedEnvironments@2025-01-01' = {
   }
 }
 
-resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = {
+resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWorkloads) {
   name: 'verdecora-orchestrator-${environment}'
   location: location
   tags: union(tags, {
@@ -214,7 +217,7 @@ resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = {
   }
 }
 
-resource flow0DedupJob 'Microsoft.App/jobs@2025-01-01' = {
+resource flow0DedupJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads) {
   name: 'verdecora-dedup-job-${environment}'
   location: location
   tags: union(tags, {
@@ -306,7 +309,7 @@ resource flow0DedupJob 'Microsoft.App/jobs@2025-01-01' = {
   }
 }
 
-resource hitlWebformApp 'Microsoft.App/containerApps@2025-01-01' = {
+resource hitlWebformApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWorkloads) {
   name: 'verdecora-hitl-webform-${environment}'
   location: location
   tags: union(tags, {
@@ -388,7 +391,7 @@ resource hitlWebformApp 'Microsoft.App/containerApps@2025-01-01' = {
   }
 }
 
-resource escalationTimerJob 'Microsoft.App/jobs@2025-01-01' = {
+resource escalationTimerJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads) {
   name: 'verdecora-escalation-timer-${environment}'
   location: location
   tags: union(tags, {
@@ -444,7 +447,7 @@ resource escalationTimerJob 'Microsoft.App/jobs@2025-01-01' = {
   }
 }
 
-resource reconciliationJob 'Microsoft.App/jobs@2025-01-01' = if (enablePostMvpJobs) {
+resource reconciliationJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads && enablePostMvpJobs) {
   name: 'verdecora-reconciliation-${environment}'
   location: location
   tags: union(tags, {
@@ -504,7 +507,7 @@ resource reconciliationJob 'Microsoft.App/jobs@2025-01-01' = if (enablePostMvpJo
   }
 }
 
-resource learningJob 'Microsoft.App/jobs@2025-01-01' = if (enablePostMvpJobs) {
+resource learningJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads && enablePostMvpJobs) {
   name: 'verdecora-learning-${environment}'
   location: location
   tags: union(tags, {
@@ -566,37 +569,37 @@ output managedEnvironmentName string = managedEnvironment.name
 output managedEnvironmentDefaultDomain string = managedEnvironment.properties.defaultDomain
 
 @description('Main orchestrator container app id.')
-output orchestratorAppId string = orchestratorApp.id
+output orchestratorAppId string = enableWorkloads ? orchestratorApp.id : ''
 
 @description('Main orchestrator managed identity principal id.')
-output orchestratorPrincipalId string = orchestratorApp.identity.principalId
+output orchestratorPrincipalId string = enableWorkloads ? orchestratorApp.identity.principalId : ''
 
 @description('Flow 0 dedup ACA Job id.')
-output flow0DedupJobId string = flow0DedupJob.id
+output flow0DedupJobId string = enableWorkloads ? flow0DedupJob.id : ''
 
 @description('Flow 0 dedup ACA Job managed identity principal id.')
-output flow0DedupPrincipalId string = flow0DedupJob.identity.principalId
+output flow0DedupPrincipalId string = enableWorkloads ? flow0DedupJob.identity.principalId : ''
 
 @description('HITL web form container app id.')
-output hitlWebformAppId string = hitlWebformApp.id
+output hitlWebformAppId string = enableWorkloads ? hitlWebformApp.id : ''
 
 @description('HITL web form managed identity principal id.')
-output hitlWebformPrincipalId string = hitlWebformApp.identity.principalId
+output hitlWebformPrincipalId string = enableWorkloads ? hitlWebformApp.identity.principalId : ''
 
 @description('Escalation timer ACA Job id.')
-output escalationTimerJobId string = escalationTimerJob.id
+output escalationTimerJobId string = enableWorkloads ? escalationTimerJob.id : ''
 
 @description('Escalation timer ACA Job managed identity principal id.')
-output escalationTimerPrincipalId string = escalationTimerJob.identity.principalId
+output escalationTimerPrincipalId string = enableWorkloads ? escalationTimerJob.identity.principalId : ''
 
 @description('Reconciliation ACA Job id.')
-output reconciliationJobId string = enablePostMvpJobs ? reconciliationJob.id : ''
+output reconciliationJobId string = enableWorkloads && enablePostMvpJobs ? reconciliationJob.id : ''
 
 @description('Reconciliation ACA Job managed identity principal id.')
-output reconciliationPrincipalId string = enablePostMvpJobs ? reconciliationJob.identity.principalId : ''
+output reconciliationPrincipalId string = enableWorkloads && enablePostMvpJobs ? reconciliationJob.identity.principalId : ''
 
 @description('Learning ACA Job id.')
-output learningJobId string = enablePostMvpJobs ? learningJob.id : ''
+output learningJobId string = enableWorkloads && enablePostMvpJobs ? learningJob.id : ''
 
 @description('Learning ACA Job managed identity principal id.')
-output learningPrincipalId string = enablePostMvpJobs ? learningJob.identity.principalId : ''
+output learningPrincipalId string = enableWorkloads && enablePostMvpJobs ? learningJob.identity.principalId : ''

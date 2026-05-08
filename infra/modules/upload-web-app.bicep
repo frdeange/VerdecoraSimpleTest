@@ -21,6 +21,15 @@ param cosmosEndpoint string
 @description('Application Insights connection string injected into upload-web.')
 param applicationInsightsConnectionString string
 
+@description('Document Intelligence endpoint exposed to upload-web.')
+param docIntellEndpoint string
+
+@description('Key Vault endpoint exposed to upload-web.')
+param keyVaultUrl string
+
+@description('Service Bus namespace name used by upload-web.')
+param serviceBusNamespaceName string
+
 @description('Optional override for the upload-web image.')
 param uploadWebImage string = ''
 
@@ -32,10 +41,8 @@ var tags = {
 }
 var managedEnvironmentName = 'acae-upload-web-${environment}'
 var resolvedUploadWebImage = empty(uploadWebImage) ? '${acrLoginServer}/verdecora-upload-web:latest' : uploadWebImage
-var docIntellEndpoint = 'https://verdecora-docintell-${environment}.cognitiveservices.azure.com/'
-var keyVaultUrl = 'https://kv-albaranes-${environment}.vault.azure.net/'
 var rawBlobContainerName = 'albaranes-raw'
-var serviceBusFullyQualifiedNamespace = 'sb-albaranes-${environment}.servicebus.windows.net'
+var serviceBusFullyQualifiedNamespace = '${serviceBusNamespaceName}.servicebus.windows.net'
 var serviceBusTopicName = 'albaran-events'
 var uploadSessionsContainerName = 'upload-sessions'
 

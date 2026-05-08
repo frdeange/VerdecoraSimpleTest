@@ -6,8 +6,10 @@ param environment string
 @description('Azure region for Container Registry resources.')
 param location string
 
+var uniqueSuffix = substring(uniqueString(subscription().subscriptionId, 'verdecora-simple', environment), 0, 6)
+
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
-  name: 'acralbaranes${environment}'
+  name: 'acrvds${environment}${uniqueSuffix}'
   location: location
   sku: {
     name: 'Standard'

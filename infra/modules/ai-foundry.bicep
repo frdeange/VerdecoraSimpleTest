@@ -19,13 +19,17 @@ param applicationInsightsId string
 @secure()
 param applicationInsightsInstrumentationKey string
 
+@description('Deploy Azure OpenAI model deployments as part of infra provisioning. Disable when subscription policy or quota blocks model rollout.')
+param enableModelDeployments bool = false
+
 var tags = {
   project: 'verdecora-albaranes'
   env: environment
   'managed-by': 'bicep'
 }
 
-var aiServicesName = 'verdecora-ais-${environment}'
+var uniqueSuffix = substring(uniqueString(subscription().subscriptionId, 'verdecora-simple', environment), 0, 6)
+var aiServicesName = 'vds-ais-${environment}-${uniqueSuffix}'
 var projectName = 'verdecora-project-${environment}'
 
 resource aiServices 'Microsoft.CognitiveServices/accounts@2025-10-01-preview' = {
@@ -71,7 +75,7 @@ resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-10-01-pre
   }
 }
 
-resource gpt5Deployment 'Microsoft.CognitiveServices/accounts/deployments@2025-10-01-preview' = {
+resource gpt5Deployment 'Microsoft.CognitiveServices/accounts/deployments@2025-10-01-preview' = if (enableModelDeployments) {
   parent: aiServices
   name: 'gpt-5'
   sku: {
@@ -89,7 +93,7 @@ resource gpt5Deployment 'Microsoft.CognitiveServices/accounts/deployments@2025-1
   }
 }
 
-resource gpt5MiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-10-01-preview' = {
+resource gpt5MiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-10-01-preview' = if (enableModelDeployments) {
   parent: aiServices
   name: 'gpt-5-mini'
   dependsOn: [
@@ -113,9 +117,6 @@ resource gpt5MiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@20
 resource storageConnection 'Microsoft.CognitiveServices/accounts/connections@2025-10-01-preview' = {
   parent: aiServices
   name: '${storageAccountName}-connection'
-  dependsOn: [
-    gpt5MiniDeployment
-  ]
   properties: {
     authType: 'AAD'
     category: 'AzureStorageAccount'
@@ -174,7 +175,7 @@ output aiProjectEndpoint string = 'https://${aiServicesName}.services.ai.azure.c
 output aiServicesPrincipalId string = aiServices.identity.principalId
 
 @description('GPT-5 deployment name.')
-output gpt5DeploymentName string = gpt5Deployment.name
+output gpt5DeploymentName string = 'gpt-5'
 
 @description('GPT-5 mini deployment name.')
-output gpt5MiniDeploymentName string = gpt5MiniDeployment.name
+output gpt5MiniDeploymentName string = 'gpt-5-mini'

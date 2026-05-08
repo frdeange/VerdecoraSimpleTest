@@ -12,8 +12,9 @@ var tags = {
   'managed-by': 'bicep'
 }
 
-var docIntellAccountName = 'verdecora-docintell-${environment}'
-var docIntellCustomSubdomainName = 'verdecora-docintell-${environment}'
+var uniqueSuffix = substring(uniqueString(subscription().subscriptionId, 'verdecora-simple', environment), 0, 6)
+var docIntellAccountName = 'vds-docintell-${environment}-${uniqueSuffix}'
+var docIntellCustomSubdomainName = docIntellAccountName
 
 resource docIntellAccount 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   name: docIntellAccountName

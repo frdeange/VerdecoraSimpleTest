@@ -12,7 +12,8 @@ var tags = {
   'managed-by': 'bicep'
 }
 
-var accountName = toLower('cosmos-albaranes-${environment}')
+var uniqueSuffix = substring(uniqueString(subscription().subscriptionId, 'verdecora-simple', environment), 0, 6)
+var accountName = 'cosmos-vds-${environment}-${uniqueSuffix}'
 
 resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2023-04-15' = {
   name: accountName
@@ -37,7 +38,8 @@ resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2023-04-15' = {
 }
 
 resource albaranesDb 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023-04-15' = {
-  name: '${cosmosAccount.name}/albaranes-db'
+  parent: cosmosAccount
+  name: 'albaranes-db'
   properties: {
     resource: {
       id: 'albaranes-db'
@@ -51,7 +53,8 @@ resource albaranesDb 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023-04
 }
 
 resource albaranesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = {
-  name: '${cosmosAccount.name}/albaranes-db/albaranes'
+  parent: albaranesDb
+  name: 'albaranes'
   properties: {
     resource: {
       id: 'albaranes'
@@ -67,7 +70,8 @@ resource albaranesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/
 }
 
 resource tiendasContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = {
-  name: '${cosmosAccount.name}/albaranes-db/tiendas'
+  parent: albaranesDb
+  name: 'tiendas'
   properties: {
     resource: {
       id: 'tiendas'
@@ -83,7 +87,8 @@ resource tiendasContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/co
 }
 
 resource dlqContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = {
-  name: '${cosmosAccount.name}/albaranes-db/dlq'
+  parent: albaranesDb
+  name: 'dlq'
   properties: {
     resource: {
       id: 'dlq'
@@ -99,7 +104,8 @@ resource dlqContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/contai
 }
 
 resource uploadSessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = {
-  name: '${cosmosAccount.name}/albaranes-db/upload-sessions'
+  parent: albaranesDb
+  name: 'upload-sessions'
   properties: {
     resource: {
       id: 'upload-sessions'

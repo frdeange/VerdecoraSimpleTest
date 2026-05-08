@@ -21,6 +21,9 @@ param hitlWebformImage string = ''
 @description('Optional override for the escalation timer job image during infrastructure deployments.')
 param escalationTimerJobImage string = ''
 
+@description('Deploy the ACA workloads (apps/jobs) during infrastructure rollout. Keep false until workload images are published.')
+param enableContainerAppWorkloads bool = false
+
 @description('Optional override for the upload-web image during infrastructure deployments.')
 param uploadWebImage string = ''
 
@@ -191,6 +194,7 @@ module containerApps './container-apps.bicep' = {
     dedupJobImage: dedupJobImage
     hitlWebformImage: hitlWebformImage
     escalationTimerJobImage: escalationTimerJobImage
+    enableWorkloads: enableContainerAppWorkloads
   }
   dependsOn: [
     rg
@@ -207,6 +211,9 @@ module uploadWebApp './upload-web-app.bicep' = if (enableUploadWeb) {
     storageAccountUrl: storageAccountUrl
     cosmosEndpoint: cosmos.outputs.cosmosEndpoint
     applicationInsightsConnectionString: monitoring.outputs.applicationInsightsConnectionString
+    docIntellEndpoint: docIntell.outputs.docIntellEndpoint
+    keyVaultUrl: keyVault.outputs.keyVaultUri
+    serviceBusNamespaceName: serviceBus.outputs.serviceBusNamespaceName
     uploadWebImage: uploadWebImage
   }
 }
@@ -259,7 +266,7 @@ module identity './identity.bicep' = {
     hitlWebformPrincipalId: containerApps.outputs.hitlWebformPrincipalId
     flow0WorkerPrincipalId: containerApps.outputs.flow0DedupPrincipalId
     escalationTimerPrincipalId: containerApps.outputs.escalationTimerPrincipalId
-    uploadWebPrincipalId: enableUploadWeb ? uploadWebApp.outputs.uploadWebPrincipalId : ''
+    uploadWebPrincipalId: enableUploadWeb ? uploadWebApp!.outputs.uploadWebPrincipalId : ''
   }
   dependsOn: [
     rg
@@ -395,7 +402,7 @@ output hitlWebformAppId string = containerApps.outputs.hitlWebformAppId
 output escalationTimerJobId string = containerApps.outputs.escalationTimerJobId
 
 @description('Upload-web container app id.')
-output uploadWebAppId string = enableUploadWeb ? uploadWebApp.outputs.uploadWebAppId : ''
+output uploadWebAppId string = enableUploadWeb ? uploadWebApp!.outputs.uploadWebAppId : ''
 
 @description('Event Grid system topic id.')
 output eventGridSystemTopicId string = eventGrid.outputs.systemTopicId

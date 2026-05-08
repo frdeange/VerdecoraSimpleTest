@@ -7,7 +7,7 @@ param environment string
 param location string
 
 @description('Key Vault name override. Defaults to the standard environment-specific name.')
-param vaultName string = 'kv-albaranes-${environment}'
+param vaultName string = 'kv-vds-${environment}-${substring(uniqueString(subscription().subscriptionId, 'verdecora-simple', environment), 0, 6)}'
 
 @description('Controls public network access during bootstrap and post-cutover hardening.')
 @allowed([
