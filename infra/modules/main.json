@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "5488535693291108405"
+      "templateHash": "2535492032135237203"
     }
   },
   "parameters": {
@@ -1900,7 +1900,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "5663363371572075936"
+              "templateHash": "18312000512882012299"
             }
           },
           "parameters": {
@@ -2081,7 +2081,8 @@
             "resolvedHitlWebformImage": "[if(empty(parameters('hitlWebformImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('hitlWebformImage'))]",
             "resolvedEscalationTimerJobImage": "[if(empty(parameters('escalationTimerJobImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('escalationTimerJobImage'))]",
             "resolvedReconciliationJobImage": "[if(empty(parameters('reconciliationJobImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('reconciliationJobImage'))]",
-            "resolvedLearningJobImage": "[if(empty(parameters('learningJobImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('learningJobImage'))]"
+            "resolvedLearningJobImage": "[if(empty(parameters('learningJobImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('learningJobImage'))]",
+            "anyCustomImage": "[or(or(or(or(or(not(empty(parameters('orchestratorImage'))), not(empty(parameters('dedupJobImage')))), not(empty(parameters('hitlWebformImage')))), not(empty(parameters('escalationTimerJobImage')))), not(empty(parameters('reconciliationJobImage')))), not(empty(parameters('learningJobImage'))))]"
           },
           "resources": [
             {
@@ -2117,12 +2118,7 @@
                   "dapr": {
                     "enabled": false
                   },
-                  "registries": [
-                    {
-                      "server": "[parameters('acrLoginServer')]",
-                      "identity": "system"
-                    }
-                  ],
+                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
                   "ingress": {
                     "external": false,
                     "targetPort": 8080,
@@ -2231,12 +2227,7 @@
               "properties": {
                 "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
                 "configuration": {
-                  "registries": [
-                    {
-                      "server": "[parameters('acrLoginServer')]",
-                      "identity": "system"
-                    }
-                  ],
+                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
                   "triggerType": "Event",
                   "replicaTimeout": 1800,
                   "replicaRetryLimit": 1,
@@ -2330,12 +2321,7 @@
                   "dapr": {
                     "enabled": false
                   },
-                  "registries": [
-                    {
-                      "server": "[parameters('acrLoginServer')]",
-                      "identity": "system"
-                    }
-                  ],
+                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
                   "ingress": {
                     "external": true,
                     "allowInsecure": false,
@@ -2411,12 +2397,7 @@
               "properties": {
                 "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
                 "configuration": {
-                  "registries": [
-                    {
-                      "server": "[parameters('acrLoginServer')]",
-                      "identity": "system"
-                    }
-                  ],
+                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
                   "triggerType": "Schedule",
                   "replicaTimeout": 1800,
                   "replicaRetryLimit": 1,
@@ -2470,12 +2451,7 @@
               "properties": {
                 "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
                 "configuration": {
-                  "registries": [
-                    {
-                      "server": "[parameters('acrLoginServer')]",
-                      "identity": "system"
-                    }
-                  ],
+                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
                   "triggerType": "Schedule",
                   "replicaTimeout": 1800,
                   "replicaRetryLimit": 1,
@@ -2533,12 +2509,7 @@
               "properties": {
                 "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
                 "configuration": {
-                  "registries": [
-                    {
-                      "server": "[parameters('acrLoginServer')]",
-                      "identity": "system"
-                    }
-                  ],
+                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
                   "triggerType": "Schedule",
                   "replicaTimeout": 1800,
                   "replicaRetryLimit": 1,
@@ -2748,7 +2719,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "3466727452968922749"
+              "templateHash": "13918887266739332113"
             }
           },
           "parameters": {
@@ -2830,6 +2801,7 @@
             },
             "managedEnvironmentName": "[format('acae-upload-web-{0}', parameters('environment'))]",
             "resolvedUploadWebImage": "[if(empty(parameters('uploadWebImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('uploadWebImage'))]",
+            "useAcrRegistry": "[not(empty(parameters('uploadWebImage')))]",
             "rawBlobContainerName": "albaranes-raw",
             "serviceBusFullyQualifiedNamespace": "[format('{0}.servicebus.windows.net', parameters('serviceBusNamespaceName'))]",
             "serviceBusTopicName": "albaran-events",
@@ -2871,12 +2843,7 @@
                 "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
                 "configuration": {
                   "activeRevisionsMode": "Single",
-                  "registries": [
-                    {
-                      "server": "[parameters('acrLoginServer')]",
-                      "identity": "system"
-                    }
-                  ],
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
                   "ingress": {
                     "external": true,
                     "allowInsecure": false,
