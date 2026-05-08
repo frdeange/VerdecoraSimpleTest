@@ -198,11 +198,12 @@ try {
     $repoSlug = "$GitHubOrg/$GitHubRepo"
     Invoke-Gh -Arguments @("repo", "view", $repoSlug, "--json", "nameWithOwner") -FailureMessage "Failed to access GitHub repository '$repoSlug'." | Out-Null
 
-    $resourceGroupInfo = Invoke-AzJson -Arguments @(
+    $subscriptionScope = "/subscriptions/$subscriptionId"
+
+    $null = Invoke-AzJson -Arguments @(
         "group", "show",
         "--name", $ResourceGroup
     ) -FailureMessage "Resource group '$ResourceGroup' was not found in the current subscription."
-    $resourceGroupScope = $resourceGroupInfo.id
 
     # Auto-discover the target ACR from the provided resource group to avoid hardcoded names.
     $acrCandidates = Invoke-AzJson -Arguments @(
@@ -283,7 +284,8 @@ try {
     }
 
     Write-Host "Ensuring RBAC assignments..." -ForegroundColor Cyan
-    $contributorRole = Ensure-RoleAssignment -Assignee $appId -Role "Contributor" -Scope $resourceGroupScope
+    # Subscription-scope deployments validate and create the resource group, so Contributor must exist at subscription scope.
+    $contributorRole = Ensure-RoleAssignment -Assignee $appId -Role "Contributor" -Scope $subscriptionScope
     $acrPushRole = Ensure-RoleAssignment -Assignee $appId -Role "AcrPush" -Scope $acrResourceId
 
     # GitHub repository variables are overwritten in place, which keeps reruns safe.

@@ -10,7 +10,7 @@ What it does:
 - discovers the active subscription and the ACR in the target resource group
 - creates or reuses an Entra app registration and service principal
 - creates federated credentials for `master` and `pull_request`
-- assigns `Contributor` on the resource group and `AcrPush` on the ACR
+- assigns `Contributor` on the subscription and `AcrPush` on the ACR
 - sets the required GitHub repository variables
 
 ### Example
@@ -23,6 +23,6 @@ What it does:
 
 - `GitHubOrg` — GitHub owner or organization
 - `GitHubRepo` — GitHub repository name
-- `ResourceGroup` — Azure resource group containing the deployment target and ACR
+- `ResourceGroup` — Azure resource group used to discover the deployment target and ACR
 - `AppName` — optional Entra app registration display name
 - `Environment` — optional environment label used for the `ENVIRONMENT` GitHub variable
