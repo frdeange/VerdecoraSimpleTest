@@ -65,3 +65,12 @@ async def test_communication_agent_service_builds_notification_and_tracks_cosmos
     assert sent_notifications == [notification]
     assert store.upserts[0]["status"] == "reminded"
     assert store.upserts[0]["escalation_level"] == EscalationLevel.REMINDER_24H.value
+
+
+def test_communication_agent_uses_hitl_base_url_env_for_fallback_callback(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HITL_WEBFORM_BASE_URL", "https://hitl-webform.swedencentral.azurecontainerapps.io")
+    service = CommunicationAgentService()
+
+    notification = service.build_notification({"id": "alb-002"}, escalation_level=EscalationLevel.INITIAL)
+
+    assert notification.callback_url == "https://hitl-webform.swedencentral.azurecontainerapps.io/review/alb-002"

@@ -6,8 +6,9 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from src.upload_web.models.upload import UploadFile
 from src.upload_web.app import create_app
+from src.upload_web.config import UploadWebSettings
+from src.upload_web.models.upload import UploadFile
 from src.upload_web.services import upload_session
 
 
@@ -85,6 +86,20 @@ def test_public_landing_page_contains_login_cta() -> None:
     assert "Sistema de Gestión de Albaranes" in response.text
     assert "Iniciar sesión con Microsoft" in response.text
     assert "/.auth/login/aad?post_login_redirect_uri=%2Fdashboard" in response.text
+
+
+@pytest.mark.unit
+def test_public_landing_page_uses_configured_public_origin_for_login_redirect() -> None:
+    app = create_app(UploadWebSettings(public_origin="upload-web.swedencentral.azurecontainerapps.io"))
+
+    with TestClient(app) as client:
+        response = client.get("/")
+
+    assert response.status_code == 200
+    assert (
+        "/.auth/login/aad?post_login_redirect_uri=https%3A%2F%2Fupload-web.swedencentral.azurecontainerapps.io%2Fdashboard"
+        in response.text
+    )
 
 
 @pytest.mark.unit

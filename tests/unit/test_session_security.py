@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.testclient import TestClient
 
 from src.upload_web.app import create_app
-from src.upload_web.config import UploadWebSettings
+from src.upload_web.config import UploadWebSettings, get_settings
 from src.upload_web.middleware.session_security import (
     SESSION_COOKIE_NAME,
     SessionSecurityManager,
@@ -172,6 +172,35 @@ def test_logout_clears_session_cookie() -> None:
     assert "HttpOnly" in response.headers["set-cookie"]
     assert "SameSite=lax" in response.headers["set-cookie"]
     assert "Secure" in response.headers["set-cookie"]
+
+
+@pytest.mark.unit
+def test_logout_uses_configured_public_origin_for_post_logout_redirect() -> None:
+    settings = UploadWebSettings(
+        session_signing_key=TEST_SIGNING_KEY,
+        public_origin="upload-web.swedencentral.azurecontainerapps.io",
+    )
+    app = create_app(settings)
+
+    with TestClient(app, base_url="https://testserver") as client:
+        client.get("/", headers=_auth_headers())
+        response = client.get("/logout?reason=idle", follow_redirects=False)
+
+    assert response.status_code == 307
+    assert (
+        response.headers["location"]
+        == "/.auth/logout?post_logout_redirect_uri=https%3A%2F%2Fupload-web.swedencentral.azurecontainerapps.io%2F%3Fsession_ended%3Didle"
+    )
+
+
+@pytest.mark.unit
+def test_upload_web_public_base_url_env_alias_maps_to_public_origin(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("UPLOAD_WEB_PUBLIC_BASE_URL", "upload-web.swedencentral.azurecontainerapps.io")
+    get_settings.cache_clear()
+
+    settings = UploadWebSettings()
+
+    assert settings.normalized_public_origin == "https://upload-web.swedencentral.azurecontainerapps.io"
 
 
 @pytest.mark.unit

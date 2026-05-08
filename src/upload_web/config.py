@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from urllib.parse import urlsplit
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -9,7 +10,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class UploadWebSettings(BaseSettings):
     """Runtime settings for the Upload Web application."""
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        populate_by_name=True,
+    )
 
     blob_account: str = Field(
         default="https://storage.example.com",
@@ -51,6 +57,28 @@ class UploadWebSettings(BaseSettings):
         default="verdecora-store-uploaders",
         validation_alias=AliasChoices("UPLOAD_ALLOWED_GROUP"),
     )
+    public_origin: str = Field(
+        default="",
+        validation_alias=AliasChoices("UPLOAD_WEB_PUBLIC_ORIGIN", "UPLOAD_WEB_PUBLIC_BASE_URL", "PUBLIC_ORIGIN"),
+    )
+
+    @property
+    def normalized_public_origin(self) -> str:
+        raw_value = self.public_origin.strip()
+        if not raw_value:
+            return ""
+        if "://" not in raw_value:
+            raw_value = f"https://{raw_value}"
+        parsed = urlsplit(raw_value)
+        if not parsed.netloc:
+            return ""
+        return f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+
+    def build_public_url(self, path: str) -> str:
+        normalized_path = path if path.startswith("/") else f"/{path}"
+        if not self.normalized_public_origin:
+            return normalized_path
+        return f"{self.normalized_public_origin}{normalized_path}"
 
 
 @lru_cache(maxsize=1)

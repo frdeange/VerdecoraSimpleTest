@@ -30,8 +30,9 @@ def _build_template_context(
     return context
 
 
-def _microsoft_login_url() -> str:
-    return f"/.auth/login/aad?{urlencode({'post_login_redirect_uri': POST_LOGIN_REDIRECT_PATH})}"
+def _microsoft_login_url(request: Request) -> str:
+    post_login_redirect_uri = request.app.state.settings.build_public_url(POST_LOGIN_REDIRECT_PATH)
+    return f"/.auth/login/aad?{urlencode({'post_login_redirect_uri': post_login_redirect_uri})}"
 
 
 @router.get("/", response_class=HTMLResponse, include_in_schema=False, name="index")
@@ -46,7 +47,7 @@ async def landing_page(request: Request) -> Response:
         {
             "request": request,
             "page_title": "Iniciar sesión · Verdecora Upload Web",
-            "login_url": _microsoft_login_url(),
+            "login_url": _microsoft_login_url(request),
             "flash_messages": getattr(request.state, "flash_messages", []),
         },
     )
