@@ -51,14 +51,13 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01'
           allowedOrigins: blobCorsAllowedOrigins
           allowedMethods: [
             'PUT'
+            'OPTIONS'
           ]
           allowedHeaders: [
             '*'
           ]
           exposedHeaders: [
-            'ETag'
-            'x-ms-request-id'
-            'x-ms-version'
+            '*'
           ]
           maxAgeInSeconds: 3600
         }

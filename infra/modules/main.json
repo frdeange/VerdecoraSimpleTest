@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "3722117051947836697"
+      "templateHash": "5818126604005021337"
     }
   },
   "parameters": {
@@ -117,12 +117,13 @@
       "type": "array",
       "defaultValue": [],
       "metadata": {
-        "description": "Exact origins allowed to call Blob CORS for upload-web browser uploads (for example the direct ACA FQDN or chosen custom domain)."
+        "description": "Exact origins allowed to call Blob CORS for upload-web browser uploads (for example the direct ACA FQDN or chosen custom domain). When omitted while upload-web is enabled, infra falls back to a temporary wildcard CORS rule so redeploys do not break uploads."
       }
     }
   },
   "variables": {
-    "resourceGroupName": "[format('rg-verdecora-simple-{0}', parameters('environment'))]"
+    "resourceGroupName": "[format('rg-verdecora-simple-{0}', parameters('environment'))]",
+    "resolvedUploadWebBlobCorsAllowedOrigins": "[if(greater(length(parameters('uploadWebBlobCorsAllowedOrigins')), 0), parameters('uploadWebBlobCorsAllowedOrigins'), if(parameters('enableUploadWeb'), createArray('*'), createArray()))]"
   },
   "resources": [
     {
@@ -749,7 +750,7 @@
             "value": "[parameters('location')]"
           },
           "blobCorsAllowedOrigins": {
-            "value": "[parameters('uploadWebBlobCorsAllowedOrigins')]"
+            "value": "[variables('resolvedUploadWebBlobCorsAllowedOrigins')]"
           }
         },
         "template": {
@@ -759,7 +760,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "13192837016460458649"
+              "templateHash": "2393002979706305133"
             }
           },
           "parameters": {
@@ -823,7 +824,7 @@
               "properties": {
                 "isVersioningEnabled": true,
                 "cors": {
-                  "corsRules": "[if(equals(length(parameters('blobCorsAllowedOrigins')), 0), createArray(), createArray(createObject('allowedOrigins', parameters('blobCorsAllowedOrigins'), 'allowedMethods', createArray('PUT'), 'allowedHeaders', createArray('*'), 'exposedHeaders', createArray('ETag', 'x-ms-request-id', 'x-ms-version'), 'maxAgeInSeconds', 3600)))]"
+                  "corsRules": "[if(equals(length(parameters('blobCorsAllowedOrigins')), 0), createArray(), createArray(createObject('allowedOrigins', parameters('blobCorsAllowedOrigins'), 'allowedMethods', createArray('PUT', 'OPTIONS'), 'allowedHeaders', createArray('*'), 'exposedHeaders', createArray('*'), 'maxAgeInSeconds', 3600)))]"
                 }
               },
               "dependsOn": [
