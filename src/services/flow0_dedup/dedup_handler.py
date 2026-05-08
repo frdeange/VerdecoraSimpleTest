@@ -187,7 +187,6 @@ class Flow0DedupHandler:
         now = datetime.now(tz=UTC)
 
         for group_key, group_files in groups.items():
-            first_file = group_files[0]
             blob_paths = [f.get("blob_path", "") for f in group_files]
             blob_urls = [f.get("blob_url") or f.get("blob_path", "") for f in group_files]
             blob_names = [f.get("filename", "") for f in group_files]
