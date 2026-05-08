@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>{{ page_title or "Verdecora Upload Web" }}</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cardo:wght@400;700&family=Open+Sans:wght@400;600;700&display=swap');
+    </style>
+    <link rel="stylesheet" href="/static/css/tailwind.min.css">
+    <link rel="stylesheet" href="/static/css/verdecora.css">
+    <script src="/static/js/htmx.min.js"></script>
+    <script defer src="/static/js/alpine.min.js"></script>
+  </head>
+  <body class="min-h-screen bg-[var(--vc-bg)] text-[var(--vc-text)] antialiased">
+    <div class="flex min-h-screen flex-col" x-data="{ mobileMenuOpen: false }">
+      {% include 'components/_header.html' %}
+      {% include 'components/_flash.html' %}
+      {% if session_notice %}
+      <section class="vc-notice" role="status">
+        {{ session_notice }}
+      </section>
+      {% endif %}
+      <main class="flex-1">
+        <div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
+          {% block content %}{% endblock %}
+        </div>
+      </main>
+      {% include 'components/_footer.html' %}
+    </div>
+    <script>
+      document.addEventListener('htmx:configRequest', function (event) {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        if (token) {
+          event.detail.headers['X-CSRF-Token'] = token;
+        }
+      });
+    </script>
+  </body>
+</html>

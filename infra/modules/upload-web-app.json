@@ -1,0 +1,257 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "3579874189970852996"
+    }
+  },
+  "parameters": {
+    "environment": {
+      "type": "string",
+      "metadata": {
+        "description": "Deployment environment name (dev/test/prod)."
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for Container Apps resources."
+      }
+    },
+    "infrastructureSubnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Subnet resource ID delegated to the upload-web Container Apps environment."
+      }
+    },
+    "logAnalyticsWorkspaceName": {
+      "type": "string",
+      "defaultValue": "[format('log-albaranes-{0}', parameters('environment'))]",
+      "metadata": {
+        "description": "Name of the Log Analytics workspace used by the upload-web Container Apps environment."
+      }
+    },
+    "acrLoginServer": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure Container Registry login server used for the upload-web image."
+      }
+    },
+    "storageAccountUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Storage account blob endpoint exposed to upload-web."
+      }
+    },
+    "cosmosEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "Cosmos DB endpoint exposed to upload-web."
+      }
+    },
+    "applicationInsightsConnectionString": {
+      "type": "string",
+      "metadata": {
+        "description": "Application Insights connection string injected into upload-web."
+      }
+    },
+    "uploadWebImage": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional override for the upload-web image."
+      }
+    }
+  },
+  "variables": {
+    "tags": {
+      "project": "verdecora-albaranes",
+      "env": "[parameters('environment')]",
+      "service": "upload-web",
+      "managed-by": "bicep"
+    },
+    "managedEnvironmentName": "[format('acae-upload-web-{0}', parameters('environment'))]",
+    "resolvedUploadWebImage": "[if(empty(parameters('uploadWebImage')), format('{0}/verdecora-upload-web:latest', parameters('acrLoginServer')), parameters('uploadWebImage'))]",
+    "docIntellEndpoint": "[format('https://verdecora-docintell-{0}.cognitiveservices.azure.com/', parameters('environment'))]",
+    "keyVaultUrl": "[format('https://kv-albaranes-{0}.vault.azure.net/', parameters('environment'))]",
+    "rawBlobContainerName": "albaranes-raw",
+    "serviceBusFullyQualifiedNamespace": "[format('sb-albaranes-{0}.servicebus.windows.net', parameters('environment'))]",
+    "serviceBusTopicName": "albaran-events",
+    "uploadSessionsContainerName": "upload-sessions"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2025-01-01",
+      "name": "[variables('managedEnvironmentName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "properties": {
+        "appLogsConfiguration": {
+          "destination": "log-analytics",
+          "logAnalyticsConfiguration": {
+            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName')), '2022-10-01').customerId]",
+            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName')), '2022-10-01').primarySharedKey]"
+          }
+        },
+        "vnetConfiguration": {
+          "infrastructureSubnetId": "[parameters('infrastructureSubnetId')]",
+          "internal": false
+        },
+        "workloadProfiles": [
+          {
+            "name": "Consumption",
+            "workloadProfileType": "Consumption"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2025-01-01",
+      "name": "[format('verdecora-upload-web-{0}', parameters('environment'))]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('tags')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "registries": [
+            {
+              "server": "[parameters('acrLoginServer')]",
+              "identity": "system"
+            }
+          ],
+          "ingress": {
+            "external": true,
+            "allowInsecure": false,
+            "targetPort": 8000,
+            "transport": "Auto"
+          }
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "upload-web",
+              "image": "[variables('resolvedUploadWebImage')]",
+              "env": [
+                {
+                  "name": "STORAGE_ACCOUNT_URL",
+                  "value": "[parameters('storageAccountUrl')]"
+                },
+                {
+                  "name": "RAW_BLOB_CONTAINER",
+                  "value": "[variables('rawBlobContainerName')]"
+                },
+                {
+                  "name": "UPLOAD_SESSIONS_CONTAINER",
+                  "value": "[variables('uploadSessionsContainerName')]"
+                },
+                {
+                  "name": "COSMOS_ENDPOINT",
+                  "value": "[parameters('cosmosEndpoint')]"
+                },
+                {
+                  "name": "DOCINTELL_ENDPOINT",
+                  "value": "[variables('docIntellEndpoint')]"
+                },
+                {
+                  "name": "SERVICEBUS_FQ_NAMESPACE",
+                  "value": "[variables('serviceBusFullyQualifiedNamespace')]"
+                },
+                {
+                  "name": "SERVICEBUS_TOPIC",
+                  "value": "[variables('serviceBusTopicName')]"
+                },
+                {
+                  "name": "KEY_VAULT_URL",
+                  "value": "[variables('keyVaultUrl')]"
+                },
+                {
+                  "name": "AZURE_TENANT_ID",
+                  "value": "[subscription().tenantId]"
+                },
+                {
+                  "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                  "value": "[parameters('applicationInsightsConnectionString')]"
+                }
+              ],
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              },
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": {
+                    "path": "/healthz",
+                    "port": 8000
+                  },
+                  "initialDelaySeconds": 5,
+                  "periodSeconds": 30
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 5
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "uploadWebAppId": {
+      "type": "string",
+      "metadata": {
+        "description": "Upload-web container app id."
+      },
+      "value": "[resourceId('Microsoft.App/containerApps', format('verdecora-upload-web-{0}', parameters('environment')))]"
+    },
+    "managedEnvironmentId": {
+      "type": "string",
+      "metadata": {
+        "description": "Upload-web managed environment id."
+      },
+      "value": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]"
+    },
+    "managedEnvironmentDefaultDomain": {
+      "type": "string",
+      "metadata": {
+        "description": "Upload-web managed environment default domain."
+      },
+      "value": "[reference(resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName')), '2025-01-01').defaultDomain]"
+    },
+    "uploadWebAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Upload-web container app name."
+      },
+      "value": "[format('verdecora-upload-web-{0}', parameters('environment'))]"
+    },
+    "uploadWebFqdn": {
+      "type": "string",
+      "metadata": {
+        "description": "Upload-web public FQDN."
+      },
+      "value": "[reference(resourceId('Microsoft.App/containerApps', format('verdecora-upload-web-{0}', parameters('environment'))), '2025-01-01').configuration.ingress.fqdn]"
+    },
+    "uploadWebPrincipalId": {
+      "type": "string",
+      "metadata": {
+        "description": "Upload-web managed identity principal id."
+      },
+      "value": "[reference(resourceId('Microsoft.App/containerApps', format('verdecora-upload-web-{0}', parameters('environment'))), '2025-01-01', 'full').identity.principalId]"
+    }
+  }
+}

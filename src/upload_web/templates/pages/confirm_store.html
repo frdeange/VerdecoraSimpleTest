@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="space-y-6">
+  <h1 class="text-2xl font-bold">Confirmar tienda</h1>
+
+  {% if preflight %}
+  <div class="rounded-lg border p-6 space-y-4 bg-white shadow-sm">
+    <h2 class="text-lg font-semibold">Resultado del análisis previo</h2>
+    <dl class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div>
+        <dt class="text-sm font-medium text-gray-500">Proveedor detectado</dt>
+        <dd class="text-base">{{ preflight.detected_supplier or '—' }}</dd>
+      </div>
+      <div>
+        <dt class="text-sm font-medium text-gray-500">Fecha detectada</dt>
+        <dd class="text-base">{{ preflight.detected_date or '—' }}</dd>
+      </div>
+      <div>
+        <dt class="text-sm font-medium text-gray-500">Nº albarán</dt>
+        <dd class="text-base">{{ preflight.detected_albaran_number or '—' }}</dd>
+      </div>
+      <div>
+        <dt class="text-sm font-medium text-gray-500">Tienda detectada</dt>
+        <dd class="text-base font-semibold">{{ preflight.detected_store or 'No detectada' }}</dd>
+      </div>
+      <div>
+        <dt class="text-sm font-medium text-gray-500">Confianza</dt>
+        <dd class="text-base">{{ (preflight.confidence * 100)|round(0) }}%</dd>
+      </div>
+    </dl>
+
+    {% if preflight.warnings %}
+    <div class="rounded bg-yellow-50 p-3 text-sm text-yellow-800">
+      <ul class="list-disc pl-5 space-y-1">
+        {% for warning in preflight.warnings %}
+        <li>{{ warning }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="flex gap-3">
+    <a href="/upload/{{ session.session_id }}/summary"
+       class="inline-flex items-center rounded-md bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-800">
+      Confirmar y continuar
+    </a>
+    <a href="/upload"
+       class="inline-flex items-center rounded-md border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+      Cancelar
+    </a>
+  </div>
+</section>
+{% endblock %}

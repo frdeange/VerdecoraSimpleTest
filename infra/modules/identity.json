@@ -1,0 +1,507 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.42.1.51946",
+      "templateHash": "288928943340083084"
+    }
+  },
+  "parameters": {
+    "cosmosAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Azure Cosmos DB account used for workflow state."
+      }
+    },
+    "serviceBusNamespaceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Azure Service Bus namespace used for workflow events."
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the storage account that stores inbound delivery note PDFs."
+      }
+    },
+    "keyVaultName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional name of the Key Vault that stores application secrets. The vault must already use RBAC authorization mode."
+      }
+    },
+    "communicationServiceName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional name of the Azure Communication Services resource used for HITL email."
+      }
+    },
+    "aiServicesAccountName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional name of the Azure AI Foundry account for granting OpenAI-compatible access to the ACA identity."
+      }
+    },
+    "docIntellAccountName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional Document Intelligence account name for granting data-plane access to the ACA identity."
+      }
+    },
+    "acrName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional Azure Container Registry name for granting image pull access to ACA identities."
+      }
+    },
+    "orchestratorPrincipalId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional system-assigned principal id for the agentic orchestrator ACA app."
+      }
+    },
+    "hitlWebformPrincipalId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional system-assigned principal id for the HITL web form ACA app."
+      }
+    },
+    "flow0WorkerPrincipalId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional system-assigned principal id for the Flow 0 dedup ACA Job."
+      }
+    },
+    "escalationTimerPrincipalId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional system-assigned principal id for the escalation timer ACA Job."
+      }
+    },
+    "uploadWebPrincipalId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional system-assigned principal id for the upload-web ACA app."
+      }
+    }
+  },
+  "variables": {
+    "cosmosBuiltInDataContributorRoleDefinitionId": "00000000-0000-0000-0000-000000000002",
+    "serviceBusDataSenderRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '69a216fc-b8fb-44d8-bc22-1f3c2cd27a39')]",
+    "serviceBusDataReceiverRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4f6d3b9b-027b-4f4c-9142-0e5a2a2247e0')]",
+    "storageBlobDataReaderRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1')]",
+    "storageBlobDataContributorRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
+    "storageBlobDelegatorRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'db58b8e5-c6ad-4a2a-8342-4190687cbf4a')]",
+    "keyVaultSecretsUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+    "contributorRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+    "acrPullRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+    "cognitiveServicesOpenAIUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')]",
+    "cognitiveServicesUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')]"
+  },
+  "resources": [
+    {
+      "condition": "[not(empty(parameters('orchestratorPrincipalId')))]",
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+      "apiVersion": "2024-05-15",
+      "name": "[format('{0}/{1}', parameters('cosmosAccountName'), guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), parameters('orchestratorPrincipalId'), variables('cosmosBuiltInDataContributorRoleDefinitionId'), 'system'))]",
+      "properties": {
+        "principalId": "[parameters('orchestratorPrincipalId')]",
+        "roleDefinitionId": "[format('{0}/sqlRoleDefinitions/{1}', resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), variables('cosmosBuiltInDataContributorRoleDefinitionId'))]",
+        "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName'))]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('orchestratorPrincipalId')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName'))]",
+      "name": "[guid(resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName')), parameters('orchestratorPrincipalId'), variables('serviceBusDataSenderRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('orchestratorPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('serviceBusDataSenderRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('orchestratorPrincipalId')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName'))]",
+      "name": "[guid(resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName')), parameters('orchestratorPrincipalId'), variables('serviceBusDataReceiverRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('orchestratorPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('serviceBusDataReceiverRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('orchestratorPrincipalId')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('orchestratorPrincipalId'), variables('storageBlobDataReaderRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('orchestratorPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('storageBlobDataReaderRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[and(not(empty(parameters('orchestratorPrincipalId'))), not(empty(parameters('aiServicesAccountName'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('aiServicesAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('aiServicesAccountName')), parameters('orchestratorPrincipalId'), variables('cognitiveServicesOpenAIUserRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('orchestratorPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('cognitiveServicesOpenAIUserRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[and(not(empty(parameters('orchestratorPrincipalId'))), not(empty(parameters('docIntellAccountName'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('docIntellAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('docIntellAccountName')), parameters('orchestratorPrincipalId'), variables('cognitiveServicesUserRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('orchestratorPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('cognitiveServicesUserRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[and(not(empty(parameters('orchestratorPrincipalId'))), not(empty(parameters('communicationServiceName'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Communication/communicationServices', parameters('communicationServiceName'))]",
+      "name": "[guid(resourceId('Microsoft.Communication/communicationServices', parameters('communicationServiceName')), parameters('orchestratorPrincipalId'), variables('contributorRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('orchestratorPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('contributorRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[and(not(empty(parameters('orchestratorPrincipalId'))), not(empty(parameters('keyVaultName'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), parameters('orchestratorPrincipalId'), variables('keyVaultSecretsUserRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('orchestratorPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('keyVaultSecretsUserRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('flow0WorkerPrincipalId')))]",
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+      "apiVersion": "2024-05-15",
+      "name": "[format('{0}/{1}', parameters('cosmosAccountName'), guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), parameters('flow0WorkerPrincipalId'), variables('cosmosBuiltInDataContributorRoleDefinitionId'), 'system'))]",
+      "properties": {
+        "principalId": "[parameters('flow0WorkerPrincipalId')]",
+        "roleDefinitionId": "[format('{0}/sqlRoleDefinitions/{1}', resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), variables('cosmosBuiltInDataContributorRoleDefinitionId'))]",
+        "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName'))]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('flow0WorkerPrincipalId')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName'))]",
+      "name": "[guid(resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName')), parameters('flow0WorkerPrincipalId'), variables('serviceBusDataSenderRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('flow0WorkerPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('serviceBusDataSenderRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('flow0WorkerPrincipalId')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName'))]",
+      "name": "[guid(resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName')), parameters('flow0WorkerPrincipalId'), variables('serviceBusDataReceiverRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('flow0WorkerPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('serviceBusDataReceiverRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('flow0WorkerPrincipalId')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('flow0WorkerPrincipalId'), variables('storageBlobDataReaderRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('flow0WorkerPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('storageBlobDataReaderRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('hitlWebformPrincipalId')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('hitlWebformPrincipalId'), variables('storageBlobDataContributorRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('hitlWebformPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('storageBlobDataContributorRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('hitlWebformPrincipalId')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('hitlWebformPrincipalId'), variables('storageBlobDelegatorRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('hitlWebformPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('storageBlobDelegatorRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('hitlWebformPrincipalId')))]",
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+      "apiVersion": "2024-05-15",
+      "name": "[format('{0}/{1}', parameters('cosmosAccountName'), guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), parameters('hitlWebformPrincipalId'), variables('cosmosBuiltInDataContributorRoleDefinitionId'), 'system'))]",
+      "properties": {
+        "principalId": "[parameters('hitlWebformPrincipalId')]",
+        "roleDefinitionId": "[format('{0}/sqlRoleDefinitions/{1}', resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), variables('cosmosBuiltInDataContributorRoleDefinitionId'))]",
+        "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName'))]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('hitlWebformPrincipalId')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName'))]",
+      "name": "[guid(resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName')), parameters('hitlWebformPrincipalId'), variables('serviceBusDataSenderRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('hitlWebformPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('serviceBusDataSenderRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('hitlWebformPrincipalId')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName'))]",
+      "name": "[guid(resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName')), parameters('hitlWebformPrincipalId'), variables('serviceBusDataReceiverRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('hitlWebformPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('serviceBusDataReceiverRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[and(not(empty(parameters('hitlWebformPrincipalId'))), not(empty(parameters('keyVaultName'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), parameters('hitlWebformPrincipalId'), variables('keyVaultSecretsUserRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('hitlWebformPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('keyVaultSecretsUserRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[and(not(empty(parameters('hitlWebformPrincipalId'))), not(empty(parameters('communicationServiceName'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Communication/communicationServices', parameters('communicationServiceName'))]",
+      "name": "[guid(resourceId('Microsoft.Communication/communicationServices', parameters('communicationServiceName')), parameters('hitlWebformPrincipalId'), variables('contributorRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('hitlWebformPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('contributorRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('escalationTimerPrincipalId')))]",
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+      "apiVersion": "2024-05-15",
+      "name": "[format('{0}/{1}', parameters('cosmosAccountName'), guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), parameters('escalationTimerPrincipalId'), variables('cosmosBuiltInDataContributorRoleDefinitionId'), 'system'))]",
+      "properties": {
+        "principalId": "[parameters('escalationTimerPrincipalId')]",
+        "roleDefinitionId": "[format('{0}/sqlRoleDefinitions/{1}', resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), variables('cosmosBuiltInDataContributorRoleDefinitionId'))]",
+        "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName'))]"
+      }
+    },
+    {
+      "condition": "[and(not(empty(parameters('escalationTimerPrincipalId'))), not(empty(parameters('communicationServiceName'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Communication/communicationServices', parameters('communicationServiceName'))]",
+      "name": "[guid(resourceId('Microsoft.Communication/communicationServices', parameters('communicationServiceName')), parameters('escalationTimerPrincipalId'), variables('contributorRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('escalationTimerPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('contributorRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[and(not(empty(parameters('orchestratorPrincipalId'))), not(empty(parameters('acrName'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), parameters('orchestratorPrincipalId'), variables('acrPullRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('orchestratorPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('acrPullRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[and(not(empty(parameters('flow0WorkerPrincipalId'))), not(empty(parameters('acrName'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), parameters('flow0WorkerPrincipalId'), variables('acrPullRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('flow0WorkerPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('acrPullRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[and(not(empty(parameters('hitlWebformPrincipalId'))), not(empty(parameters('acrName'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), parameters('hitlWebformPrincipalId'), variables('acrPullRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('hitlWebformPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('acrPullRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[and(not(empty(parameters('escalationTimerPrincipalId'))), not(empty(parameters('acrName'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), parameters('escalationTimerPrincipalId'), variables('acrPullRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('escalationTimerPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('acrPullRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('uploadWebPrincipalId')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('uploadWebPrincipalId'), variables('storageBlobDataContributorRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('uploadWebPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('storageBlobDataContributorRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('uploadWebPrincipalId')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('uploadWebPrincipalId'), variables('storageBlobDelegatorRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('uploadWebPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('storageBlobDelegatorRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('uploadWebPrincipalId')))]",
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments",
+      "apiVersion": "2024-05-15",
+      "name": "[format('{0}/{1}', parameters('cosmosAccountName'), guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), parameters('uploadWebPrincipalId'), variables('cosmosBuiltInDataContributorRoleDefinitionId'), 'system'))]",
+      "properties": {
+        "principalId": "[parameters('uploadWebPrincipalId')]",
+        "roleDefinitionId": "[format('{0}/sqlRoleDefinitions/{1}', resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName')), variables('cosmosBuiltInDataContributorRoleDefinitionId'))]",
+        "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosAccountName'))]"
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('uploadWebPrincipalId')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName'))]",
+      "name": "[guid(resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName')), parameters('uploadWebPrincipalId'), variables('serviceBusDataSenderRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('uploadWebPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('serviceBusDataSenderRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[and(not(empty(parameters('uploadWebPrincipalId'))), not(empty(parameters('docIntellAccountName'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('docIntellAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('docIntellAccountName')), parameters('uploadWebPrincipalId'), variables('cognitiveServicesUserRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('uploadWebPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('cognitiveServicesUserRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[and(not(empty(parameters('uploadWebPrincipalId'))), not(empty(parameters('keyVaultName'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), parameters('uploadWebPrincipalId'), variables('keyVaultSecretsUserRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('uploadWebPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('keyVaultSecretsUserRoleDefinitionId')]"
+      }
+    },
+    {
+      "condition": "[and(not(empty(parameters('uploadWebPrincipalId'))), not(empty(parameters('acrName'))))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), parameters('uploadWebPrincipalId'), variables('acrPullRoleDefinitionId'), 'system')]",
+      "properties": {
+        "principalId": "[parameters('uploadWebPrincipalId')]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('acrPullRoleDefinitionId')]"
+      }
+    }
+  ],
+  "outputs": {
+    "identities": {
+      "type": "object",
+      "value": {
+        "orchestratorSystemAssignedPrincipalId": "[parameters('orchestratorPrincipalId')]",
+        "hitlWebformSystemAssignedPrincipalId": "[parameters('hitlWebformPrincipalId')]",
+        "flow0WorkerSystemAssignedPrincipalId": "[parameters('flow0WorkerPrincipalId')]",
+        "escalationTimerSystemAssignedPrincipalId": "[parameters('escalationTimerPrincipalId')]",
+        "uploadWebSystemAssignedPrincipalId": "[parameters('uploadWebPrincipalId')]"
+      }
+    }
+  }
+}
