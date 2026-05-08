@@ -56,7 +56,7 @@ def generate_upload_sas_url(
         protocol="https",
     )
 
-    sas_url = f"{account_url}/{container}/{blob_path}?{sas_token}"
+    sas_url = f"{account_url.rstrip('/')}/{container}/{blob_path}?{sas_token}"
     return sas_url, blob_path, SAS_EXPIRY_SECONDS
 
 
