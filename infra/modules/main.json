@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "1687351293734880345"
+      "templateHash": "13309145446176598925"
     }
   },
   "parameters": {
@@ -108,7 +108,7 @@
     }
   },
   "variables": {
-    "resourceGroupName": "[format('rg-verdecoratest-{0}', parameters('environment'))]",
+    "resourceGroupName": "[format('rg-verdecora-simple-{0}', parameters('environment'))]",
     "enableNetworkHardening": true,
     "uploadWebAppName": "[format('verdecora-upload-web-{0}', parameters('environment'))]"
   },
@@ -141,7 +141,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "3119150818297019486"
+              "templateHash": "8573653665271579183"
             }
           },
           "parameters": {
@@ -159,7 +159,7 @@
             },
             "resourceGroupName": {
               "type": "string",
-              "defaultValue": "[format('rg-verdecoratest-{0}', parameters('environment'))]",
+              "defaultValue": "[format('rg-verdecora-simple-{0}', parameters('environment'))]",
               "metadata": {
                 "description": "Resource group name."
               }
@@ -3210,9 +3210,6 @@
           "location": {
             "value": "[parameters('location')]"
           },
-          "infrastructureSubnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'network'), '2025-04-01').outputs.subnetAcaEnvId.value]"
-          },
           "logAnalyticsWorkspaceName": {
             "value": "[format('log-albaranes-{0}', parameters('environment'))]"
           },
@@ -3275,7 +3272,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "12839044626987532590"
+              "templateHash": "1330121717842099294"
             }
           },
           "parameters": {
@@ -3289,12 +3286,6 @@
               "type": "string",
               "metadata": {
                 "description": "Azure region for Container Apps resources."
-              }
-            },
-            "infrastructureSubnetId": {
-              "type": "string",
-              "metadata": {
-                "description": "Subnet resource ID delegated to the Container Apps environment."
               }
             },
             "logAnalyticsWorkspaceName": {
@@ -3464,10 +3455,6 @@
                     "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName')), '2022-10-01').customerId]",
                     "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName')), '2022-10-01').primarySharedKey]"
                   }
-                },
-                "vnetConfiguration": {
-                  "infrastructureSubnetId": "[parameters('infrastructureSubnetId')]",
-                  "internal": true
                 }
               }
             },
@@ -4056,9 +4043,6 @@
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'docIntell')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'keyVault')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'monitoring')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'natGateway')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'network')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'privateEndpoints')]",
         "[subscriptionResourceId('Microsoft.Resources/deployments', 'resourceGroup')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'serviceBus')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'storage')]"
@@ -4081,9 +4065,6 @@
           },
           "location": {
             "value": "[parameters('location')]"
-          },
-          "infrastructureSubnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'network'), '2025-04-01').outputs.subnetUploadWebId.value]"
           },
           "acrLoginServer": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'acr'), '2025-04-01').outputs.acrLoginServer.value]"
@@ -4108,7 +4089,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "3579874189970852996"
+              "templateHash": "4727277532318629891"
             }
           },
           "parameters": {
@@ -4122,12 +4103,6 @@
               "type": "string",
               "metadata": {
                 "description": "Azure region for Container Apps resources."
-              }
-            },
-            "infrastructureSubnetId": {
-              "type": "string",
-              "metadata": {
-                "description": "Subnet resource ID delegated to the upload-web Container Apps environment."
               }
             },
             "logAnalyticsWorkspaceName": {
@@ -4199,10 +4174,6 @@
                     "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName')), '2022-10-01').customerId]",
                     "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName')), '2022-10-01').primarySharedKey]"
                   }
-                },
-                "vnetConfiguration": {
-                  "infrastructureSubnetId": "[parameters('infrastructureSubnetId')]",
-                  "internal": false
                 },
                 "workloadProfiles": [
                   {
@@ -4363,7 +4334,6 @@
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'acr')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'cosmos')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'monitoring')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'network')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'storage')]"
       ]
     },

@@ -6,9 +6,6 @@ param environment string
 @description('Azure region for Container Apps resources.')
 param location string
 
-@description('Subnet resource ID delegated to the Container Apps environment.')
-param infrastructureSubnetId string = ''
-
 @description('Name of the Log Analytics workspace used by the Container Apps environment.')
 param logAnalyticsWorkspaceName string = 'log-albaranes-${environment}'
 
@@ -95,7 +92,7 @@ resource managedEnvironment 'Microsoft.App/managedEnvironments@2025-01-01' = {
   name: managedEnvironmentName
   location: location
   tags: tags
-  properties: union({
+  properties: {
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
@@ -103,12 +100,7 @@ resource managedEnvironment 'Microsoft.App/managedEnvironments@2025-01-01' = {
         sharedKey: logAnalytics.listKeys().primarySharedKey
       }
     }
-  }, empty(infrastructureSubnetId) ? {} : {
-    vnetConfiguration: {
-      infrastructureSubnetId: infrastructureSubnetId
-      internal: true
-    }
-  })
+  }
 }
 
 resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = {
