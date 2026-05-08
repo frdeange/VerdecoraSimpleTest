@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 from uuid import uuid4
 
@@ -37,6 +37,43 @@ def _enforce_ownership(session: UploadSession, user: AuthenticatedUser) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Upload session does not belong to the current user.",
         )
+
+
+def _analyze_session_files_with_document_intelligence(
+    session: UploadSession,
+    *,
+    account_url: str,
+    container: str,
+    endpoint: str,
+) -> list[dict[str, Any]]:
+    from azure.storage.blob import BlobSasPermissions, BlobServiceClient, generate_blob_sas
+
+    from src.config.security import get_managed_identity_credential
+    from src.upload_web.services.preflight import analyze_with_document_intelligence
+
+    credential = get_managed_identity_credential()
+    blob_service_client = BlobServiceClient(account_url=account_url, credential=credential)
+    now = datetime.now(UTC)
+    start_time = now - timedelta(minutes=5)
+    expiry_time = now + timedelta(minutes=15)
+    delegation_key = blob_service_client.get_user_delegation_key(start_time, expiry_time)
+
+    doc_results: list[dict[str, Any]] = []
+    for upload_file in session.files[:5]:
+        sas_token = generate_blob_sas(
+            account_name=blob_service_client.account_name,
+            container_name=container,
+            blob_name=upload_file.blob_path,
+            user_delegation_key=delegation_key,
+            permission=BlobSasPermissions(read=True),
+            start=start_time,
+            expiry=expiry_time,
+            protocol="https",
+        )
+        blob_url = f"{account_url}/{container}/{upload_file.blob_path}?{sas_token}"
+        doc_results.append(analyze_with_document_intelligence(blob_url, endpoint))
+
+    return doc_results
 
 
 @router.post("", response_model=UploadSession, status_code=status.HTTP_201_CREATED)
@@ -128,15 +165,14 @@ def preflight_check(session_id: str, current_user: CurrentUser) -> PreflightResu
     settings = get_settings()
     if settings.docintell_endpoint:
         try:
-            from src.upload_web.services.preflight import analyze_with_document_intelligence
-
-            account_url = settings.blob_account
+            account_url = settings.blob_account.rstrip("/")
             container = settings.raw_blob_container
-            doc_results = []
-            for f in session.files[:5]:
-                blob_url = f"{account_url}/{container}/{f.blob_path}"
-                result = analyze_with_document_intelligence(blob_url, settings.docintell_endpoint)
-                doc_results.append(result)
+            doc_results = _analyze_session_files_with_document_intelligence(
+                session,
+                account_url=account_url,
+                container=container,
+                endpoint=settings.docintell_endpoint,
+            )
         except Exception:
             logger.warning("Document Intelligence analysis failed; falling back to heuristic.", exc_info=True)
             doc_results = None

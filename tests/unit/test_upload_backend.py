@@ -6,11 +6,13 @@ import base64
 import json
 
 import pytest
+from azure.storage import blob as azure_blob
 from fastapi.testclient import TestClient
 from itsdangerous import URLSafeSerializer
 
+from src.config import security
 from src.upload_web.app import create_app
-from src.upload_web.config import get_settings
+from src.upload_web.config import UploadWebSettings, get_settings
 from src.upload_web.models.file_metadata import FileMetadata
 from src.upload_web.models.upload import SessionStatus, UploadFile, UploadSession
 from src.upload_web.services import upload_session
@@ -323,6 +325,81 @@ def test_api_preflight_with_files() -> None:
     body = pf_resp.json()
     assert body["session_id"] == session_id
     assert "confidence" in body
+
+
+@pytest.mark.unit
+def test_api_preflight_uses_read_sas_for_docintelligence(monkeypatch: pytest.MonkeyPatch) -> None:
+    credential = object()
+    captured: dict[str, object] = {"urls": [], "permissions": []}
+
+    class FakeBlobServiceClient:
+        def __init__(self, *, account_url: str, credential: object) -> None:
+            captured["account_url"] = account_url
+            captured["credential"] = credential
+            self.account_name = "verdecoraacct"
+
+        def get_user_delegation_key(self, start: object, expiry: object) -> str:
+            captured["delegation_calls"] = int(captured.get("delegation_calls", 0)) + 1
+            captured["delegation_window"] = (start, expiry)
+            return "delegation-key"
+
+    def fake_generate_blob_sas(**kwargs: object) -> str:
+        captured["sas_calls"] = int(captured.get("sas_calls", 0)) + 1
+        permissions = captured["permissions"]
+        assert isinstance(permissions, list)
+        permissions.append(kwargs["permission"])
+        return f"token-{kwargs['blob_name']}"
+
+    def fake_analyze(blob_url: str, endpoint: str) -> dict[str, str]:
+        urls = captured["urls"]
+        assert isinstance(urls, list)
+        urls.append(blob_url)
+        captured["endpoint"] = endpoint
+        return {"content": "ALBARAN 123"}
+
+    monkeypatch.setattr(security, "get_managed_identity_credential", lambda: credential)
+    monkeypatch.setattr(azure_blob, "BlobServiceClient", FakeBlobServiceClient)
+    monkeypatch.setattr(azure_blob, "generate_blob_sas", fake_generate_blob_sas)
+    monkeypatch.setattr("src.upload_web.services.preflight.analyze_with_document_intelligence", fake_analyze)
+    monkeypatch.setattr(
+        "src.upload_web.config.get_settings",
+        lambda: UploadWebSettings(
+            blob_account="https://acct.blob.core.windows.net/",
+            raw_blob_container="albaranes-raw",
+            docintell_endpoint="https://docintell.example.com",
+        ),
+    )
+
+    with _api_client() as client:
+        headers = _establish_session(client)
+        create_resp = client.post("/api/sessions", headers=headers)
+        session_id = create_resp.json()["session_id"]
+
+        for filename in ("page1.pdf", "page2.pdf"):
+            client.post(
+                f"/api/sessions/{session_id}/files",
+                headers=headers,
+                json={
+                    "filename": filename,
+                    "blob_path": f"{session_id}/{filename}",
+                    "mime_type": "application/pdf",
+                    "size_bytes": 1024,
+                },
+            )
+
+        pf_resp = client.post(f"/api/sessions/{session_id}/preflight", headers=headers)
+
+    assert pf_resp.status_code == 200
+    assert captured["account_url"] == "https://acct.blob.core.windows.net"
+    assert captured["credential"] is credential
+    assert captured["delegation_calls"] == 1
+    assert captured["sas_calls"] == 2
+    assert captured["endpoint"] == "https://docintell.example.com"
+    assert captured["urls"] == [
+        f"https://acct.blob.core.windows.net/albaranes-raw/{session_id}/page1.pdf?token-{session_id}/page1.pdf",
+        f"https://acct.blob.core.windows.net/albaranes-raw/{session_id}/page2.pdf?token-{session_id}/page2.pdf",
+    ]
+    assert all(permission.read for permission in captured["permissions"])
 
 
 @pytest.mark.unit
