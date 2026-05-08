@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from html import escape
@@ -74,7 +75,7 @@ class CommunicationAgentService:
         )
         callback_url = str(
             review_record.get("callback_url")
-            or f"https://hitl-webform.example.com/review/{self._get_albaran_id(review_record)}"
+            or _build_default_hitl_callback_url(self._get_albaran_id(review_record))
         )
         pdf_sas_url = str(review_record.get("pdf_sas_url") or review_record.get("blob_url") or "")
         return HITLNotification(
@@ -176,6 +177,13 @@ def _default_send_notification_tool(notification: HITLNotification) -> Any:
     from src.mcp.acs_email_mcp.server import send_hitl_notification
 
     return send_hitl_notification(notification)
+
+
+def _build_default_hitl_callback_url(albaran_id: str) -> str:
+    base_url = str(os.getenv("HITL_WEBFORM_BASE_URL", "https://hitl-webform.example.com")).strip()
+    if "://" not in base_url:
+        base_url = f"https://{base_url}"
+    return f"{base_url.rstrip('/')}/review/{albaran_id}"
 
 
 __all__ = ["CommunicationAgentService", "CommunicationSummary"]

@@ -6,7 +6,7 @@ param environment string
 @description('Azure region for Storage resources.')
 param location string
 
-@description('Exact origins allowed to call Blob service CORS. Pass the Front Door/custom-domain origins explicitly because the default azurefd.net hostname is generated at deploy time.')
+@description('Exact origins allowed to call Blob service CORS. Pass the direct upload-web public origin explicitly (for example https://<app-name>.<region>.azurecontainerapps.io or a custom domain).')
 param blobCorsAllowedOrigins array = []
 
 var tags = {

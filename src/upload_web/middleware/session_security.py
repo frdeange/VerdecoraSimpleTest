@@ -258,10 +258,12 @@ def security_template_context(request: Request) -> dict[str, Any]:
     }
 
 
-def build_logout_redirect(reason: str | None = None) -> str:
+def build_logout_redirect(reason: str | None = None, settings: UploadWebSettings | None = None) -> str:
     redirect_target = "/"
     if reason == "idle":
         redirect_target = "/?session_ended=idle"
+    if settings is not None:
+        redirect_target = settings.build_public_url(redirect_target)
     query = urlencode({"post_logout_redirect_uri": redirect_target})
     return f"/.auth/logout?{query}"
 

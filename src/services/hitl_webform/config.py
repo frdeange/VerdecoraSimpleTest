@@ -4,7 +4,7 @@ import os
 from functools import lru_cache
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 def _get_bool_env(name: str, default: bool) -> bool:
@@ -34,11 +34,25 @@ class HITLWebformConfig(BaseModel):
         default_factory=lambda: _get_bool_env("HITL_ALLOW_EMAIL_BEARER", False)
     )
 
+    @field_validator("public_base_url", mode="before")
+    @classmethod
+    def _normalize_public_base_url(cls, value: object) -> str:
+        raw_value = str(value or "").strip()
+        if not raw_value:
+            raw_value = "https://hitl-webform.example.com"
+        if "://" not in raw_value:
+            raw_value = f"https://{raw_value}"
+        return raw_value.rstrip("/")
+
     @property
     def service_bus_fully_qualified_namespace(self) -> str:
         if "." in self.service_bus_namespace:
             return self.service_bus_namespace
         return f"{self.service_bus_namespace}.servicebus.windows.net"
+
+    def build_public_url(self, path: str) -> str:
+        normalized_path = path if path.startswith("/") else f"/{path}"
+        return f"{self.public_base_url}{normalized_path}"
 
     def create_credential(self) -> Any:
         try:
