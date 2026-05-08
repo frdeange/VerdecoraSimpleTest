@@ -164,6 +164,14 @@ resource uploadWebApp 'Microsoft.App/containerApps@2025-01-01' = {
               value: cosmosEndpoint
             }
             {
+              name: 'DATABASE_NAME'
+              value: 'albaranes-db'
+            }
+            {
+              name: 'COSMOS_DATABASE'
+              value: 'albaranes-db'
+            }
+            {
               name: 'DOCINTELL_ENDPOINT'
               value: docIntellEndpoint
             }

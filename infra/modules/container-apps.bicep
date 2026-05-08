@@ -153,6 +153,14 @@ resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWo
               value: cosmosEndpoint
             }
             {
+              name: 'DATABASE_NAME'
+              value: 'albaranes-db'
+            }
+            {
+              name: 'PROCESSING_CONTAINER_NAME'
+              value: 'processing-records'
+            }
+            {
               name: 'DOCINTELL_ENDPOINT'
               value: docIntellEndpoint
             }
@@ -365,6 +373,14 @@ resource hitlWebformApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWor
               value: cosmosEndpoint
             }
             {
+              name: 'DATABASE_NAME'
+              value: 'albaranes-db'
+            }
+            {
+              name: 'PROCESSING_CONTAINER_NAME'
+              value: 'processing-records'
+            }
+            {
               name: 'STORAGE_ACCOUNT_URL'
               value: storageAccountUrl
             }
@@ -435,6 +451,14 @@ resource escalationTimerJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkload
             {
               name: 'COSMOS_ENDPOINT'
               value: cosmosEndpoint
+            }
+            {
+              name: 'DATABASE_NAME'
+              value: 'albaranes-db'
+            }
+            {
+              name: 'PROCESSING_CONTAINER_NAME'
+              value: 'processing-records'
             }
             {
               name: 'ACS_ENDPOINT'
