@@ -24,6 +24,12 @@
 - Infrastructure rollouts: `enableContainerAppWorkloads` defaults to `true`; placeholder MCR images keep ACA workloads deployable before real images exist in ACR.
 - AI Foundry deployment: `enableModelDeployments` defaults to `false` due to policy/quota validation; enable after confirmation.
 
+### Parker — Upload-web Easy Auth IaC (Issue #31)
+- **Date:** 2026-05-08
+- **Decision:** Co-locate the `authConfigs` child resource with `upload-web-app.bicep` and parameterize the Entra client secret as a secure Container App secret reference.
+- **Why:** Keeps upload-web authentication reproducible in one module while avoiding repository-stored credentials.
+- **Impact:** Future deployments can stage upload-web first, then enable Easy Auth by setting `enableUploadWebAuth=true` plus secure Entra client credentials on the same module deployment.
+
 ### Dallas — CI/CD Redesign (Issue #4)
 - **Date:** 2026-05-08
 - **Decision:** Adopt GitHub-hosted `ubuntu-latest` runners and GitHub OIDC federation for Azure deployments.

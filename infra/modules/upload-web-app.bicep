@@ -33,6 +33,25 @@ param serviceBusNamespaceName string
 @description('Optional override for the upload-web image.')
 param uploadWebImage string = ''
 
+@description('Enable Easy Auth deployment for upload-web.')
+param enableAuth bool = false
+
+@description('Microsoft Entra tenant id used by upload-web Easy Auth.')
+param entraTenantId string = subscription().tenantId
+
+@description('Microsoft Entra application client id used by upload-web Easy Auth.')
+param entraClientId string = ''
+
+@description('Microsoft Entra application client secret used by upload-web Easy Auth.')
+@secure()
+param entraClientSecret string = ''
+
+@description('Optional audiences accepted by upload-web Easy Auth. Defaults to api://{entraClientId}.')
+param allowedAudiences array = []
+
+@description('Optional Microsoft Entra group object ids allowed to access upload-web.')
+param allowedGroupObjectIds array = []
+
 var tags = {
   project: 'verdecora-albaranes'
   env: environment
@@ -46,6 +65,26 @@ var rawBlobContainerName = 'albaranes-raw'
 var serviceBusFullyQualifiedNamespace = '${serviceBusNamespaceName}.servicebus.windows.net'
 var serviceBusTopicName = 'albaran-events'
 var uploadSessionsContainerName = 'upload-sessions'
+var authSecretName = 'microsoft-provider-authentication-secret'
+var authEnabled = enableAuth && !empty(entraClientId) && !empty(entraClientSecret)
+var resolvedAllowedAudiences = empty(allowedAudiences) ? [
+  'api://${entraClientId}'
+] : allowedAudiences
+var aadValidation = empty(allowedGroupObjectIds)
+  ? {
+      allowedAudiences: resolvedAllowedAudiences
+    }
+  : {
+      allowedAudiences: resolvedAllowedAudiences
+      defaultAuthorizationPolicy: {
+        allowedPrincipals: {
+          groups: allowedGroupObjectIds
+        }
+      }
+      jwtClaimChecks: {
+        allowedGroups: allowedGroupObjectIds
+      }
+    }
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: logAnalyticsWorkspaceName
@@ -83,6 +122,12 @@ resource uploadWebApp 'Microsoft.App/containerApps@2025-01-01' = {
     environmentId: managedEnvironment.id
     configuration: {
       activeRevisionsMode: 'Single'
+      secrets: authEnabled ? [
+        {
+          name: authSecretName
+          value: entraClientSecret
+        }
+      ] : []
       registries: useAcrRegistry ? [
         {
           server: acrLoginServer
@@ -163,6 +208,44 @@ resource uploadWebApp 'Microsoft.App/containerApps@2025-01-01' = {
       scale: {
         minReplicas: 1
         maxReplicas: 5
+      }
+    }
+  }
+}
+
+resource uploadWebAuth 'Microsoft.App/containerApps/authConfigs@2025-01-01' = if (authEnabled) {
+  parent: uploadWebApp
+  name: 'current'
+  properties: {
+    platform: {
+      enabled: true
+    }
+    globalValidation: {
+      redirectToProvider: 'azureActiveDirectory'
+      unauthenticatedClientAction: 'RedirectToLoginPage'
+    }
+    httpSettings: {
+      requireHttps: true
+    }
+    identityProviders: {
+      azureActiveDirectory: {
+        enabled: true
+        login: {
+          loginParameters: [
+            'scope=openid profile email'
+          ]
+        }
+        registration: {
+          clientId: entraClientId
+          clientSecretSettingName: authSecretName
+          openIdIssuer: '${az.environment().authentication.loginEndpoint}${entraTenantId}/v2.0'
+        }
+        validation: aadValidation
+      }
+    }
+    login: {
+      tokenStore: {
+        enabled: true
       }
     }
   }

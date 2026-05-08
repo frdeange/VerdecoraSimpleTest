@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "12670262961308985679"
+      "templateHash": "11703869288472257787"
     }
   },
   "parameters": {
@@ -85,6 +85,13 @@
         "description": "Microsoft Entra application client id used by upload-web Easy Auth."
       }
     },
+    "uploadWebEntraClientSecret": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Microsoft Entra application client secret used by upload-web Easy Auth."
+      }
+    },
     "enableUploadWebAuth": {
       "type": "bool",
       "defaultValue": false,
@@ -115,8 +122,7 @@
     }
   },
   "variables": {
-    "resourceGroupName": "[format('rg-verdecora-simple-{0}', parameters('environment'))]",
-    "uploadWebAppName": "[format('verdecora-upload-web-{0}', parameters('environment'))]"
+    "resourceGroupName": "[format('rg-verdecora-simple-{0}', parameters('environment'))]"
   },
   "resources": [
     {
@@ -2710,6 +2716,24 @@
           },
           "uploadWebImage": {
             "value": "[parameters('uploadWebImage')]"
+          },
+          "enableAuth": {
+            "value": "[parameters('enableUploadWebAuth')]"
+          },
+          "entraTenantId": {
+            "value": "[subscription().tenantId]"
+          },
+          "entraClientId": {
+            "value": "[parameters('uploadWebEntraClientId')]"
+          },
+          "entraClientSecret": {
+            "value": "[parameters('uploadWebEntraClientSecret')]"
+          },
+          "allowedAudiences": {
+            "value": "[parameters('uploadWebAllowedAudiences')]"
+          },
+          "allowedGroupObjectIds": {
+            "value": "[parameters('uploadWebAllowedGroupObjectIds')]"
           }
         },
         "template": {
@@ -2719,7 +2743,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "13918887266739332113"
+              "templateHash": "10103683402538309770"
             }
           },
           "parameters": {
@@ -2790,6 +2814,48 @@
               "metadata": {
                 "description": "Optional override for the upload-web image."
               }
+            },
+            "enableAuth": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Enable Easy Auth deployment for upload-web."
+              }
+            },
+            "entraTenantId": {
+              "type": "string",
+              "defaultValue": "[subscription().tenantId]",
+              "metadata": {
+                "description": "Microsoft Entra tenant id used by upload-web Easy Auth."
+              }
+            },
+            "entraClientId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Microsoft Entra application client id used by upload-web Easy Auth."
+              }
+            },
+            "entraClientSecret": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Microsoft Entra application client secret used by upload-web Easy Auth."
+              }
+            },
+            "allowedAudiences": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Optional audiences accepted by upload-web Easy Auth. Defaults to api://{entraClientId}."
+              }
+            },
+            "allowedGroupObjectIds": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Optional Microsoft Entra group object ids allowed to access upload-web."
+              }
             }
           },
           "variables": {
@@ -2805,7 +2871,11 @@
             "rawBlobContainerName": "albaranes-raw",
             "serviceBusFullyQualifiedNamespace": "[format('{0}.servicebus.windows.net', parameters('serviceBusNamespaceName'))]",
             "serviceBusTopicName": "albaran-events",
-            "uploadSessionsContainerName": "upload-sessions"
+            "uploadSessionsContainerName": "upload-sessions",
+            "authSecretName": "microsoft-provider-authentication-secret",
+            "authEnabled": "[and(and(parameters('enableAuth'), not(empty(parameters('entraClientId')))), not(empty(parameters('entraClientSecret'))))]",
+            "resolvedAllowedAudiences": "[if(empty(parameters('allowedAudiences')), createArray(format('api://{0}', parameters('entraClientId'))), parameters('allowedAudiences'))]",
+            "aadValidation": "[if(empty(parameters('allowedGroupObjectIds')), createObject('allowedAudiences', variables('resolvedAllowedAudiences')), createObject('allowedAudiences', variables('resolvedAllowedAudiences'), 'defaultAuthorizationPolicy', createObject('allowedPrincipals', createObject('groups', parameters('allowedGroupObjectIds'))), 'jwtClaimChecks', createObject('allowedGroups', parameters('allowedGroupObjectIds'))))]"
           },
           "resources": [
             {
@@ -2843,6 +2913,7 @@
                 "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
                 "configuration": {
                   "activeRevisionsMode": "Single",
+                  "secrets": "[if(variables('authEnabled'), createArray(createObject('name', variables('authSecretName'), 'value', parameters('entraClientSecret'))), createArray())]",
                   "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
                   "ingress": {
                     "external": true,
@@ -2924,6 +2995,48 @@
               "dependsOn": [
                 "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]"
               ]
+            },
+            {
+              "condition": "[variables('authEnabled')]",
+              "type": "Microsoft.App/containerApps/authConfigs",
+              "apiVersion": "2025-01-01",
+              "name": "[format('{0}/{1}', format('verdecora-upload-web-{0}', parameters('environment')), 'current')]",
+              "properties": {
+                "platform": {
+                  "enabled": true
+                },
+                "globalValidation": {
+                  "redirectToProvider": "azureActiveDirectory",
+                  "unauthenticatedClientAction": "RedirectToLoginPage"
+                },
+                "httpSettings": {
+                  "requireHttps": true
+                },
+                "identityProviders": {
+                  "azureActiveDirectory": {
+                    "enabled": true,
+                    "login": {
+                      "loginParameters": [
+                        "scope=openid profile email"
+                      ]
+                    },
+                    "registration": {
+                      "clientId": "[parameters('entraClientId')]",
+                      "clientSecretSettingName": "[variables('authSecretName')]",
+                      "openIdIssuer": "[format('{0}{1}/v2.0', environment().authentication.loginEndpoint, parameters('entraTenantId'))]"
+                    },
+                    "validation": "[variables('aadValidation')]"
+                  }
+                },
+                "login": {
+                  "tokenStore": {
+                    "enabled": true
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/containerApps', format('verdecora-upload-web-{0}', parameters('environment')))]"
+              ]
             }
           ],
           "outputs": {
@@ -2980,136 +3093,6 @@
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'monitoring')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'serviceBus')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'storage')]"
-      ]
-    },
-    {
-      "condition": "[and(parameters('enableUploadWebAuth'), not(empty(parameters('uploadWebEntraClientId'))))]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
-      "name": "uploadWebAuth",
-      "resourceGroup": "[variables('resourceGroupName')]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "containerAppName": {
-            "value": "[variables('uploadWebAppName')]"
-          },
-          "tenantId": {
-            "value": "[subscription().tenantId]"
-          },
-          "clientId": {
-            "value": "[parameters('uploadWebEntraClientId')]"
-          },
-          "allowedAudiences": {
-            "value": "[parameters('uploadWebAllowedAudiences')]"
-          },
-          "allowedGroupObjectIds": {
-            "value": "[parameters('uploadWebAllowedGroupObjectIds')]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "8894751000453714026"
-            }
-          },
-          "parameters": {
-            "containerAppName": {
-              "type": "string",
-              "metadata": {
-                "description": "Container App name for upload-web."
-              }
-            },
-            "tenantId": {
-              "type": "string",
-              "metadata": {
-                "description": "Microsoft Entra tenant id used by Easy Auth."
-              }
-            },
-            "clientId": {
-              "type": "string",
-              "metadata": {
-                "description": "Microsoft Entra application client id used by upload-web Easy Auth."
-              }
-            },
-            "allowedAudiences": {
-              "type": "array",
-              "defaultValue": [],
-              "metadata": {
-                "description": "Optional audiences accepted by upload-web Easy Auth. Defaults to api://{clientId}."
-              }
-            },
-            "allowedGroupObjectIds": {
-              "type": "array",
-              "defaultValue": [],
-              "metadata": {
-                "description": "Optional Microsoft Entra group object ids allowed to access upload-web."
-              }
-            }
-          },
-          "variables": {
-            "resolvedAllowedAudiences": "[if(empty(parameters('allowedAudiences')), createArray(format('api://{0}', parameters('clientId'))), parameters('allowedAudiences'))]",
-            "aadValidation": "[if(empty(parameters('allowedGroupObjectIds')), createObject('allowedAudiences', variables('resolvedAllowedAudiences')), createObject('allowedAudiences', variables('resolvedAllowedAudiences'), 'defaultAuthorizationPolicy', createObject('allowedPrincipals', createObject('groups', parameters('allowedGroupObjectIds'))), 'jwtClaimChecks', createObject('allowedGroups', parameters('allowedGroupObjectIds'))))]"
-          },
-          "resources": [
-            {
-              "type": "Microsoft.App/containerApps/authConfigs",
-              "apiVersion": "2025-01-01",
-              "name": "[format('{0}/{1}', parameters('containerAppName'), 'current')]",
-              "properties": {
-                "platform": {
-                  "enabled": true
-                },
-                "globalValidation": {
-                  "redirectToProvider": "azureActiveDirectory",
-                  "unauthenticatedClientAction": "RedirectToLoginPage"
-                },
-                "httpSettings": {
-                  "requireHttps": true
-                },
-                "identityProviders": {
-                  "azureActiveDirectory": {
-                    "enabled": true,
-                    "login": {
-                      "loginParameters": [
-                        "scope=openid profile email"
-                      ]
-                    },
-                    "registration": {
-                      "clientId": "[parameters('clientId')]",
-                      "openIdIssuer": "[format('{0}{1}/v2.0', environment().authentication.loginEndpoint, parameters('tenantId'))]"
-                    },
-                    "validation": "[variables('aadValidation')]"
-                  }
-                },
-                "login": {
-                  "tokenStore": {
-                    "enabled": true
-                  }
-                }
-              }
-            }
-          ],
-          "outputs": {
-            "authConfigId": {
-              "type": "string",
-              "metadata": {
-                "description": "Easy Auth config resource id for upload-web."
-              },
-              "value": "[resourceId('Microsoft.App/containerApps/authConfigs', parameters('containerAppName'), 'current')]"
-            }
-          }
-        }
-      },
-      "dependsOn": [
-        "[subscriptionResourceId('Microsoft.Resources/deployments', 'resourceGroup')]"
       ]
     },
     {

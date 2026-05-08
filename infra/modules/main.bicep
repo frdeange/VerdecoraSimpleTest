@@ -33,6 +33,10 @@ param enableUploadWeb bool = false
 @description('Microsoft Entra application client id used by upload-web Easy Auth.')
 param uploadWebEntraClientId string = ''
 
+@description('Microsoft Entra application client secret used by upload-web Easy Auth.')
+@secure()
+param uploadWebEntraClientSecret string = ''
+
 @description('Enable Easy Auth deployment for upload-web once the container app exists.')
 param enableUploadWebAuth bool = false
 
@@ -216,24 +220,13 @@ module uploadWebApp './upload-web-app.bicep' = if (enableUploadWeb) {
     keyVaultUrl: keyVault.outputs.keyVaultUri
     serviceBusNamespaceName: serviceBus.outputs.serviceBusNamespaceName
     uploadWebImage: uploadWebImage
-  }
-}
-
-var uploadWebAppName = 'verdecora-upload-web-${environment}'
-
-module uploadWebAuth './upload-web-auth.bicep' = if (enableUploadWebAuth && !empty(uploadWebEntraClientId)) {
-  name: 'uploadWebAuth'
-  scope: az.resourceGroup(resourceGroupName)
-  params: {
-    containerAppName: uploadWebAppName
-    tenantId: subscription().tenantId
-    clientId: uploadWebEntraClientId
+    enableAuth: enableUploadWebAuth
+    entraTenantId: subscription().tenantId
+    entraClientId: uploadWebEntraClientId
+    entraClientSecret: uploadWebEntraClientSecret
     allowedAudiences: uploadWebAllowedAudiences
     allowedGroupObjectIds: uploadWebAllowedGroupObjectIds
   }
-  dependsOn: [
-    rg
-  ]
 }
 
 module eventGrid './eventgrid.bicep' = {
