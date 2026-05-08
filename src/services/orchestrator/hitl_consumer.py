@@ -66,12 +66,11 @@ async def run_hitl_decision_consumer(
 ) -> None:
     """Long-running task that consumes HITL decisions from Service Bus topic."""
     try:
-        from azure.servicebus.aio import ServiceBusClient
+        from azure.servicebus.aio import ServiceBusClient as _SBClient  # noqa: F401
     except ModuleNotFoundError:
         logger.warning("azure-servicebus not installed — HITL decision consumer disabled")
         return
 
-    config = orchestrator.config
     sb_client = orchestrator.dependencies.get_service_bus_client()
 
     logger.info(
