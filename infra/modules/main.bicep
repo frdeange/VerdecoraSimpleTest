@@ -46,11 +46,15 @@ param uploadWebAllowedAudiences array = []
 @description('Optional Microsoft Entra group object ids allowed to access upload-web.')
 param uploadWebAllowedGroupObjectIds array = []
 
-@description('Exact origins allowed to call Blob CORS for upload-web browser uploads (for example the direct ACA FQDN or chosen custom domain).')
+@description('Exact origins allowed to call Blob CORS for upload-web browser uploads (for example the direct ACA FQDN or chosen custom domain). When omitted while upload-web is enabled, infra falls back to a temporary wildcard CORS rule so redeploys do not break uploads.')
 param uploadWebBlobCorsAllowedOrigins array = []
 
 var resourceGroupName = 'rg-verdecora-simple-${environment}'
 var storageAccountUrl = 'https://${storage.outputs.storageAccountName}.blob.${az.environment().suffixes.storage}/'
+// TODO(#37): tighten the fallback wildcard by wiring the resolved upload-web public origin once main.bicep can derive it without creating a storage/upload-web dependency cycle.
+var resolvedUploadWebBlobCorsAllowedOrigins = length(uploadWebBlobCorsAllowedOrigins) > 0
+  ? uploadWebBlobCorsAllowedOrigins
+  : (enableUploadWeb ? ['*'] : [])
 
 module rg './resource-group.bicep' = {
   name: 'resourceGroup'
@@ -91,7 +95,7 @@ module storage './storage.bicep' = {
   params: {
     environment: environment
     location: location
-    blobCorsAllowedOrigins: uploadWebBlobCorsAllowedOrigins
+    blobCorsAllowedOrigins: resolvedUploadWebBlobCorsAllowedOrigins
   }
   dependsOn: [
     rg
