@@ -14,14 +14,14 @@ param vaultName string = 'kv-albaranes-${environment}'
   'Enabled'
   'Disabled'
 ])
-param publicNetworkAccess string = 'Disabled'
+param publicNetworkAccess string = 'Enabled'
 
 @description('Firewall default action for the Key Vault network ACLs.')
 @allowed([
   'Allow'
   'Deny'
 ])
-param networkDefaultAction string = 'Deny'
+param networkDefaultAction string = 'Allow'
 
 @description('Optional GitHub PAT value to seed into Key Vault during bootstrap.')
 @secure()
