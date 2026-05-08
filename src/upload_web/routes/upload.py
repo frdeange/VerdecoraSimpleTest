@@ -25,6 +25,21 @@ STATUS_BADGES = {
 }
 
 
+def _normalize_status_filter(status_filter: str) -> str:
+    normalized_filter = status_filter.strip().lower()
+    return normalized_filter if normalized_filter in STATUS_FILTERS else ""
+
+
+def _status_filter_options() -> list[dict[str, str]]:
+    return [
+        {
+            "value": status,
+            "label": STATUS_BADGES.get(status, (status.capitalize(), ""))[0],
+        }
+        for status in STATUS_FILTERS
+    ]
+
+
 def _build_template_context(
     request: Request,
     current_user: AuthenticatedUser,
@@ -127,29 +142,8 @@ async def upload_page(request: Request, current_user: CurrentUser) -> HTMLRespon
 
 
 @router.get("/mis-albaranes", response_class=HTMLResponse, name="my_uploads_page")
-async def my_uploads_page(request: Request, current_user: CurrentUser) -> HTMLResponse:
-    sessions = get_all_user_sessions(current_user.oid)
-    uploads = _build_upload_rows(sessions)
-
-    return request.app.state.templates.TemplateResponse(
-        request,
-        "pages/my_albaranes.html",
-        _build_template_context(
-            request,
-            current_user,
-            page_title="Mis albaranes · Verdecora Upload Web",
-            uploads=uploads,
-            status_options=STATUS_FILTERS,
-        ),
-    )
-
-
-@router.get("/mis-albaranes/filter", response_class=HTMLResponse, name="my_uploads_filter")
-async def my_uploads_filter(
-    request: Request,
-    current_user: CurrentUser,
-    status_filter: str = "",
-) -> HTMLResponse:
+async def my_uploads_page(request: Request, current_user: CurrentUser, status: str = "") -> HTMLResponse:
+    status_filter = _normalize_status_filter(status)
     sessions = get_all_user_sessions(current_user.oid)
     uploads = _build_upload_rows(sessions, status_filter)
 
@@ -162,8 +156,26 @@ async def my_uploads_filter(
             page_title="Mis albaranes · Verdecora Upload Web",
             uploads=uploads,
             status_filter=status_filter,
-            status_options=STATUS_FILTERS,
+            status_options=_status_filter_options(),
         ),
+    )
+
+
+@router.get("/mis-albaranes/filter", response_class=HTMLResponse, name="my_uploads_filter")
+async def my_uploads_filter(
+    request: Request,
+    current_user: CurrentUser,
+    status_filter: str = "",
+) -> RedirectResponse:
+    normalized_filter = _normalize_status_filter(status_filter)
+    query_params = {"status": normalized_filter} if normalized_filter else {}
+    target_url = "/mis-albaranes"
+    if query_params:
+        target_url = f"{target_url}?{urlencode(query_params)}"
+
+    return RedirectResponse(
+        url=target_url,
+        status_code=307,
     )
 
 
