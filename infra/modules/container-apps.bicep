@@ -572,34 +572,34 @@ output managedEnvironmentDefaultDomain string = managedEnvironment.properties.de
 output orchestratorAppId string = enableWorkloads ? orchestratorApp.id : ''
 
 @description('Main orchestrator managed identity principal id.')
-output orchestratorPrincipalId string = enableWorkloads ? orchestratorApp.identity.principalId : ''
+output orchestratorPrincipalId string = enableWorkloads ? (orchestratorApp.?identity.?principalId ?? '') : ''
 
 @description('Flow 0 dedup ACA Job id.')
 output flow0DedupJobId string = enableWorkloads ? flow0DedupJob.id : ''
 
 @description('Flow 0 dedup ACA Job managed identity principal id.')
-output flow0DedupPrincipalId string = enableWorkloads ? flow0DedupJob.identity.principalId : ''
+output flow0DedupPrincipalId string = enableWorkloads ? (flow0DedupJob.?identity.?principalId ?? '') : ''
 
 @description('HITL web form container app id.')
 output hitlWebformAppId string = enableWorkloads ? hitlWebformApp.id : ''
 
 @description('HITL web form managed identity principal id.')
-output hitlWebformPrincipalId string = enableWorkloads ? hitlWebformApp.identity.principalId : ''
+output hitlWebformPrincipalId string = enableWorkloads ? (hitlWebformApp.?identity.?principalId ?? '') : ''
 
 @description('Escalation timer ACA Job id.')
 output escalationTimerJobId string = enableWorkloads ? escalationTimerJob.id : ''
 
 @description('Escalation timer ACA Job managed identity principal id.')
-output escalationTimerPrincipalId string = enableWorkloads ? escalationTimerJob.identity.principalId : ''
+output escalationTimerPrincipalId string = enableWorkloads ? (escalationTimerJob.?identity.?principalId ?? '') : ''
 
 @description('Reconciliation ACA Job id.')
 output reconciliationJobId string = enableWorkloads && enablePostMvpJobs ? reconciliationJob.id : ''
 
 @description('Reconciliation ACA Job managed identity principal id.')
-output reconciliationPrincipalId string = enableWorkloads && enablePostMvpJobs ? reconciliationJob.identity.principalId : ''
+output reconciliationPrincipalId string = enableWorkloads && enablePostMvpJobs ? (reconciliationJob.?identity.?principalId ?? '') : ''
 
 @description('Learning ACA Job id.')
 output learningJobId string = enableWorkloads && enablePostMvpJobs ? learningJob.id : ''
 
 @description('Learning ACA Job managed identity principal id.')
-output learningPrincipalId string = enableWorkloads && enablePostMvpJobs ? learningJob.identity.principalId : ''
+output learningPrincipalId string = enableWorkloads && enablePostMvpJobs ? (learningJob.?identity.?principalId ?? '') : ''
