@@ -33,6 +33,9 @@ param extractionQueueName string = 'extraccion-in'
 @description('Topic name used by the HITL webform to publish review decisions.')
 param hitlDecisionsTopicName string = 'hitl-decisions'
 
+@description('Queue name used by the orchestrator to publish manual-review handoff messages.')
+param hitlReviewQueueName string = 'hitl-review'
+
 @description('Storage account blob endpoint exposed to the workloads.')
 param storageAccountUrl string
 
@@ -86,6 +89,7 @@ var resolvedHitlWebformImage = empty(hitlWebformImage) ? 'mcr.microsoft.com/k8se
 var resolvedEscalationTimerJobImage = empty(escalationTimerJobImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : escalationTimerJobImage
 var resolvedReconciliationJobImage = empty(reconciliationJobImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : reconciliationJobImage
 var resolvedLearningJobImage = empty(learningJobImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : learningJobImage
+var anyCustomImage = !empty(orchestratorImage) || !empty(dedupJobImage) || !empty(hitlWebformImage) || !empty(escalationTimerJobImage) || !empty(reconciliationJobImage) || !empty(learningJobImage)
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: logAnalyticsWorkspaceName
@@ -122,12 +126,12 @@ resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWo
       dapr: {
         enabled: false
       }
-      registries: [
+      registries: anyCustomImage ? [
         {
           server: acrLoginServer
           identity: 'system'
         }
-      ]
+      ] : []
       ingress: {
         external: false
         targetPort: 8080
@@ -171,6 +175,10 @@ resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWo
             {
               name: 'EXTRACTION_QUEUE_NAME'
               value: extractionQueueName
+            }
+            {
+              name: 'HITL_QUEUE_NAME'
+              value: hitlReviewQueueName
             }
             {
               name: 'STORAGE_ACCOUNT_URL'
@@ -229,12 +237,12 @@ resource flow0DedupJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads) {
   properties: {
     environmentId: managedEnvironment.id
     configuration: {
-      registries: [
+      registries: anyCustomImage ? [
         {
           server: acrLoginServer
           identity: 'system'
         }
-      ]
+      ] : []
       triggerType: 'Event'
       replicaTimeout: 1800
       replicaRetryLimit: 1
@@ -325,12 +333,12 @@ resource hitlWebformApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWor
       dapr: {
         enabled: false
       }
-      registries: [
+      registries: anyCustomImage ? [
         {
           server: acrLoginServer
           identity: 'system'
         }
-      ]
+      ] : []
       ingress: {
         external: true
         allowInsecure: false
@@ -403,12 +411,12 @@ resource escalationTimerJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkload
   properties: {
     environmentId: managedEnvironment.id
     configuration: {
-      registries: [
+      registries: anyCustomImage ? [
         {
           server: acrLoginServer
           identity: 'system'
         }
-      ]
+      ] : []
       triggerType: 'Schedule'
       replicaTimeout: 1800
       replicaRetryLimit: 1
@@ -459,12 +467,12 @@ resource reconciliationJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads
   properties: {
     environmentId: managedEnvironment.id
     configuration: {
-      registries: [
+      registries: anyCustomImage ? [
         {
           server: acrLoginServer
           identity: 'system'
         }
-      ]
+      ] : []
       triggerType: 'Schedule'
       replicaTimeout: 1800
       replicaRetryLimit: 1
@@ -519,12 +527,12 @@ resource learningJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads && en
   properties: {
     environmentId: managedEnvironment.id
     configuration: {
-      registries: [
+      registries: anyCustomImage ? [
         {
           server: acrLoginServer
           identity: 'system'
         }
-      ]
+      ] : []
       triggerType: 'Schedule'
       replicaTimeout: 1800
       replicaRetryLimit: 1

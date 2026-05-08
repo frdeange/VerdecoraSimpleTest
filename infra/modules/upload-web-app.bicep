@@ -41,6 +41,7 @@ var tags = {
 }
 var managedEnvironmentName = 'acae-upload-web-${environment}'
 var resolvedUploadWebImage = empty(uploadWebImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : uploadWebImage
+var useAcrRegistry = !empty(uploadWebImage)
 var rawBlobContainerName = 'albaranes-raw'
 var serviceBusFullyQualifiedNamespace = '${serviceBusNamespaceName}.servicebus.windows.net'
 var serviceBusTopicName = 'albaran-events'
@@ -82,12 +83,12 @@ resource uploadWebApp 'Microsoft.App/containerApps@2025-01-01' = {
     environmentId: managedEnvironment.id
     configuration: {
       activeRevisionsMode: 'Single'
-      registries: [
+      registries: useAcrRegistry ? [
         {
           server: acrLoginServer
           identity: 'system'
         }
-      ]
+      ] : []
       ingress: {
         external: true
         allowInsecure: false
