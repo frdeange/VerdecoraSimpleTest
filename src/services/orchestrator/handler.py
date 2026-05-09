@@ -99,6 +99,47 @@ def _request_from_forwarded_message(payload: Any) -> OrchestrationRequest:
     )
 
 
+def _try_upload_session_request(payload: Any) -> OrchestrationRequest | None:
+    if not isinstance(payload, dict):
+        return None
+
+    session_id = payload.get("session_id")
+    files = payload.get("files")
+    if not isinstance(session_id, str) or not session_id or not isinstance(files, list) or not files:
+        return None
+
+    first_file = files[0]
+    if not isinstance(first_file, dict):
+        return None
+
+    blob_url = first_file.get("blob_url")
+    if not isinstance(blob_url, str) or not blob_url:
+        return None
+
+    metadata = {
+        "session_id": session_id,
+        "upload_session_id": session_id,
+        "user_oid": payload.get("user_oid"),
+        "uploader_oid": payload.get("user_oid"),
+        "user_name": payload.get("user_name"),
+        "uploader_name": payload.get("user_name"),
+        "timestamp": payload.get("timestamp"),
+        "confirmed_at": payload.get("confirmed_at"),
+        "preflight": payload.get("preflight"),
+        "files": files,
+        "primary_file": first_file,
+        "blob_path": first_file.get("blob_path"),
+        "blob_name": first_file.get("filename"),
+        "content_type": first_file.get("content_type"),
+        "content_length": first_file.get("size_bytes"),
+    }
+    return OrchestrationRequest(
+        processing_id=session_id,
+        blob_url=blob_url,
+        metadata={key: value for key, value in metadata.items() if value is not None},
+    )
+
+
 def deserialize_message(message: Any) -> OrchestrationRequest:
     payload = _deserialize_payload(_extract_message_body(message))
 
@@ -110,6 +151,9 @@ def deserialize_message(message: Any) -> OrchestrationRequest:
             return _request_from_forwarded_message(payload)
         except Exception as exc:  # pragma: no cover - defensive parsing path.
             raise QueueMessageError("Invalid Service Bus payload for orchestration.") from exc
+
+    if upload_session_request := _try_upload_session_request(payload):
+        return upload_session_request
 
     try:
         return OrchestrationRequest.model_validate(payload)
