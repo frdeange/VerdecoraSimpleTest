@@ -22,6 +22,8 @@ from .security import sanitize_untrusted_payload
 LOGGER = logging.getLogger(__name__)
 MAX_EXTRACTION_INPUT_LENGTH = 15000
 
+MAX_EXTRACTION_INPUT_LENGTH = 15000
+
 
 class PipelineDocumentInput(BaseModel):
     document_reference: str
