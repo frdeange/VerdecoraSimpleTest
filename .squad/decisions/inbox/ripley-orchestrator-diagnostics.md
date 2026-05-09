@@ -133,3 +133,7 @@ Install the Azure SDK packages required by this service before using these helpe
 | 2026-05-09 ~08:34 | Second test upload (43dc6ae6): confirmed, SB publish failed (same dependency issue) |
 | 2026-05-09 ~08:36 | **Root cause found**: upload-web missing azure-servicebus package |
 | 2026-05-09 ~08:37 | Fix committed: added azure-servicebus to requirements.txt |
+| 2026-05-09 ~09:00 | Quickstart rev 0000015 appeared again (registry-set triggered new revision) |
+| 2026-05-09 ~09:01 | Switched to multi-revision mode, routed 100% traffic to rev 0000014 |
+| 2026-05-09 ~09:02 | Deactivated quickstart rev 0000015, orchestrator stable ✅ |
+| 2026-05-09 ~09:03 | PR #64 created for azure-servicebus fix |
