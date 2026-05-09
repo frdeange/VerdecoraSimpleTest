@@ -173,27 +173,41 @@ async def handle_message(
     receiver: Any,
     message: Any,
 ) -> OrchestrationResult:
-    request = deserialize_message(message)
+    import sys
+    import traceback
+
+    print(f"[ORCHESTRATOR] handle_message: deserializing...", file=sys.stderr, flush=True)
+    try:
+        request = deserialize_message(message)
+    except Exception as exc:
+        print(f"[ORCHESTRATOR] DESERIALIZATION FAILED: {exc}", file=sys.stderr, flush=True)
+        traceback.print_exc(file=sys.stderr)
+        raise
+
+    print(f"[ORCHESTRATOR] Processing: blob_url={request.blob_url[:80]}... id={request.processing_id}", file=sys.stderr, flush=True)
     try:
         result = await orchestrator.process_document(request)
+        print(f"[ORCHESTRATOR] SUCCESS: id={result.processing_id} status={result.status} routing={result.routing_decision}", file=sys.stderr, flush=True)
     except OrchestrationError as exc:
         error_description = exc.result.error or str(exc)
-        LOGGER.exception(
-            "Message processing failed: processing_id=%s delivery_count=%s dead_letter=%s error=%s",
-            exc.result.processing_id,
-            getattr(message, "delivery_count", 1),
-            getattr(message, "delivery_count", 1) >= orchestrator.config.max_delivery_attempts,
-            error_description,
-        )
+        print(f"[ORCHESTRATOR] PROCESSING FAILED: id={exc.result.processing_id} error={error_description}", file=sys.stderr, flush=True)
+        traceback.print_exc(file=sys.stderr)
         if getattr(message, "delivery_count", 1) >= orchestrator.config.max_delivery_attempts:
             await receiver.dead_letter_message(
                 message,
                 reason="orchestration_failed",
                 error_description=error_description,
             )
+            print(f"[ORCHESTRATOR] Dead-lettered after {getattr(message, 'delivery_count', '?')} attempts", file=sys.stderr, flush=True)
         else:
             await receiver.abandon_message(message)
+            print(f"[ORCHESTRATOR] Abandoned, will retry (attempt {getattr(message, 'delivery_count', '?')})", file=sys.stderr, flush=True)
         return exc.result
+    except Exception as exc:
+        print(f"[ORCHESTRATOR] UNEXPECTED ERROR: {exc}", file=sys.stderr, flush=True)
+        traceback.print_exc(file=sys.stderr)
+        await receiver.abandon_message(message)
+        raise
 
     await receiver.complete_message(message)
     return result
