@@ -21,6 +21,10 @@ class BCToolBase:
     def __init__(self, client: BCMCPClient, *, name: str, description: str) -> None:
         self.name = name
         self.description = description
+        # agent_framework wraps callables with FunctionTool and derives the tool name from
+        # ``__name__``.  Without these aliases every BC tool resolves to ``unknown_function``.
+        self.__name__ = name
+        self.__doc__ = description
         self._client = client
 
     async def __call__(self, **kwargs: Any) -> str:
