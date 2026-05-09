@@ -316,9 +316,13 @@ class OrchestratorService:
         metadata: dict[str, Any],
         ocr_payload: dict[str, Any],
     ) -> PipelineDocumentInput:
+        raw_text = str(ocr_payload.get("content") or "").strip() or None
+        build_readable_ocr_text = getattr(self.pipeline, "_build_readable_ocr_text", None)
+        if callable(build_readable_ocr_text):
+            raw_text = build_readable_ocr_text(ocr_payload) or raw_text
         return PipelineDocumentInput(
             document_reference=blob_url,
-            raw_text=str(ocr_payload.get("content") or "") or None,
+            raw_text=raw_text,
             ocr_payload=ocr_payload,
             supplier_id=self._get_optional_str(metadata, "supplier_id"),
             supplier_hint=self._get_optional_str(metadata, "supplier_hint"),

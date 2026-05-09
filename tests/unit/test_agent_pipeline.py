@@ -119,8 +119,7 @@ async def test_pipeline_run_with_mocked_agents() -> None:
     assert result.inventory == posting_result
     assert result.routing_decision == "posted"
     assert workflows["triage"].payloads == ["ALBARAN DE ENTREGA"]
-    assert isinstance(workflows["extractor"].payloads[0], Message)
-    assert workflows["extractor"].payloads[0].raw_representation == {"pages": [{"pageNumber": 1}]}
+    assert workflows["extractor"].payloads == ["ALBARAN DE ENTREGA"]
     assert isinstance(workflows["coherence"].payloads[0], Message)
     assert workflows["coherence"].payloads[0].raw_representation == extraction_result.model_dump(mode="json")
     assert isinstance(workflows["validator"].payloads[0], Message)
@@ -233,3 +232,68 @@ async def test_pipeline_routes_hitl_review_when_validation_requires_manual_revie
     assert result.routing_decision == "hitl_review"
     assert result.inventory is None
     assert result.skipped_steps == ["inventory"]
+
+
+@pytest.mark.asyncio
+async def test_pipeline_formats_ocr_payload_into_readable_text_for_extractor() -> None:
+    config = AgentsConfig.model_validate({"thresholds": {"low_value_coherence_threshold": 10.0}})
+    extraction_result = sample_extraction()
+    workflows = {
+        "triage": FakeWorkflow(sample_triage_result().model_dump(mode="json")),
+        "extractor": FakeWorkflow(extraction_result.model_dump(mode="json")),
+    }
+    pipeline = AlbaranPipeline(config=config, agents=_named_agents())
+    input_data = PipelineDocumentInput(
+        document_reference="https://storage/account/albaran.pdf",
+        total_amount=5.0,
+        ocr_payload={
+            "content": "ALBARÁN HERSTERA",
+            "key_value_pairs": [{"key": "pedido", "value": "PO-2026-0456"}],
+            "tables": [
+                {
+                    "row_count": 2,
+                    "column_count": 2,
+                    "cells": [
+                        {"row_index": 0, "column_index": 0, "content": "Código"},
+                        {"row_index": 0, "column_index": 1, "content": "Cantidad"},
+                        {"row_index": 1, "column_index": 0, "content": "ABC-001"},
+                        {"row_index": 1, "column_index": 1, "content": "3"},
+                    ],
+                }
+            ],
+        },
+    )
+
+    with patch("src.agents.pipeline.SequentialBuilder", side_effect=_patch_sequential_builder(workflows)):
+        result = await pipeline.run(input_data)
+
+    assert result.routing_decision == "extract"
+    extractor_payload = workflows["extractor"].payloads[0]
+    assert extractor_payload.startswith("ALBARÁN HERSTERA")
+    assert "Key-value pairs:" in extractor_payload
+    assert "- pedido: PO-2026-0456" in extractor_payload
+    assert "Table 1:" in extractor_payload
+    assert "Código | Cantidad" in extractor_payload
+    assert "ABC-001 | 3" in extractor_payload
+
+
+@pytest.mark.asyncio
+async def test_pipeline_routes_to_hitl_and_logs_when_extractor_returns_refusal(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    workflows = {
+        "triage": FakeWorkflow(sample_triage_result().model_dump(mode="json")),
+        "extractor": FakeWorkflow("I'm sorry, but I cannot assist with that request."),
+    }
+    pipeline = AlbaranPipeline(agents=_named_agents())
+
+    with (
+        patch("src.agents.pipeline.SequentialBuilder", side_effect=_patch_sequential_builder(workflows)),
+        caplog.at_level("ERROR"),
+    ):
+        result = await pipeline.run(PipelineDocumentInput(document_reference="https://storage/account/albaran.pdf"))
+
+    assert result.routing_decision == "hitl_review"
+    assert result.extraction is None
+    assert result.skipped_steps == ["coherence", "validation", "inventory"]
+    assert "cannot assist with that request" in caplog.text
