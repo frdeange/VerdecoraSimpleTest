@@ -51,6 +51,11 @@ def test_build_headers_uses_default_credential_scope() -> None:
 
 
 def test_bc_tools_normalize_with_unique_agent_framework_names() -> None:
+    """Each BC tool must resolve to its own namespaced name via agent_framework.normalize_tools().
+
+    Without ``self.__name__ = name`` on BCToolBase, normalize_tools wraps every tool as a
+    FunctionTool named ``unknown_function`` because it falls back to ``obj.__name__``.
+    """
     registry = build_bc_tool_registry(client=SimpleNamespace())
     expected_names = {
         "coherence": ["bc.search_vendors", "bc.search_purchase_orders", "bc.search_items"],
