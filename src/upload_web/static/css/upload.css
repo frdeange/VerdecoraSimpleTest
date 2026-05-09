@@ -225,6 +225,42 @@
   margin-top: 1.5rem;
 }
 
+.upload-layout {
+  margin-bottom: 1.5rem;
+}
+
+.upload-side-panel {
+  min-height: 100%;
+}
+
+.upload-side-panel-state[hidden] {
+  display: none !important;
+}
+
+.upload-side-panel .preflight-results {
+  margin-top: 0;
+}
+
+.upload-side-panel .result-card {
+  margin-top: 0;
+}
+
+.upload-side-panel .preflight-results-grid {
+  grid-template-columns: 1fr;
+}
+
+.upload-side-panel .preflight-results-actions {
+  justify-content: stretch;
+}
+
+.upload-side-panel .preflight-results-actions .btn-primary {
+  width: 100%;
+}
+
+.upload-footer-note {
+  margin-top: 0;
+}
+
 .preflight-results[hidden] {
   display: none !important;
 }
@@ -625,6 +661,10 @@
 
 /* Responsive — tablet-first */
 @media (max-width: 768px) {
+  .upload-layout {
+    gap: 1rem;
+  }
+
   .dropzone {
     padding: 2rem 1rem;
   }

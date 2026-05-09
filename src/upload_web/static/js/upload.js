@@ -200,11 +200,24 @@
     return warningBox;
   }
 
+  function setPreflightPanelState(showResults) {
+    const instructionsEl = document.getElementById("preflight-instructions");
+    const resultsEl = document.getElementById("preflight-results");
+
+    if (instructionsEl) {
+      instructionsEl.hidden = showResults;
+    }
+
+    if (resultsEl) {
+      resultsEl.hidden = !showResults;
+    }
+  }
+
   function renderMessageCard(message, tone) {
     const resultsEl = document.getElementById("preflight-results");
     if (!resultsEl) return;
 
-    resultsEl.hidden = false;
+    setPreflightPanelState(true);
     resultsEl.innerHTML = "";
 
     const card = createElement("section", "preflight-results-card result-card " + tone);
@@ -330,7 +343,7 @@
 
     card.appendChild(actions);
 
-    resultsEl.hidden = false;
+    setPreflightPanelState(true);
     resultsEl.innerHTML = "";
     resultsEl.appendChild(card);
     setActiveStep(STEP_ANALYSIS);
@@ -670,6 +683,7 @@
     initDropzone();
     initGrouping();
     initPreflightFlow();
+    setPreflightPanelState(false);
     setActiveStep(STEP_FILES);
   });
 
