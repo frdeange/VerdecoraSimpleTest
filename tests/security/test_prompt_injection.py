@@ -5,6 +5,7 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+from agent_framework import Message
 
 from src.agents.pipeline import AlbaranPipeline, PipelineDocumentInput
 from src.agents.prompts import (
@@ -105,8 +106,11 @@ async def test_pipeline_sanitizes_prompt_injection_vectors_before_agent_executio
 
     assert "system prompt" not in triage_payload.casefold()
     assert "[blocked-untrusted-input]" in triage_payload
-    assert "drop table" not in extraction_payload["ocr_text"].casefold()
-    assert "[blocked-untrusted-input]" in extraction_payload["ocr_text"]
+    assert isinstance(extraction_payload, Message)
+    assert "drop table" not in extraction_payload.text.casefold()
+    assert "[blocked-untrusted-input]" in extraction_payload.text
+    assert "drop table" not in extraction_payload.raw_representation["ocr_text"].casefold()
+    assert "[blocked-untrusted-input]" in extraction_payload.raw_representation["ocr_text"]
 
 
 def test_sanitize_untrusted_payload_preserves_nested_business_fields() -> None:

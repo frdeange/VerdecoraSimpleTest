@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import pytest
+from agent_framework import Message
 
 from src.services.orchestrator.handler import handle_message
 from tests.e2e.conftest import FakeReceivedMessage
@@ -55,17 +56,17 @@ async def test_pipeline_e2e_happy_path_updates_cosmos_and_preserves_agent_handof
     assert not service_bus_client.sent_messages
 
     assert workflows["triage"].payloads == [ocr_payload["content"]]
-    assert workflows["extractor"].payloads == [ocr_payload]
-    assert workflows["coherence"].payloads == [extraction_result.model_dump(mode="json")]
-    assert workflows["validator"].payloads == [
-        {
-            "extraction": extraction_result.model_dump(mode="json"),
-            "coherence": coherence_result.model_dump(mode="json"),
-        }
-    ]
-    assert workflows["inventory"].payloads == [
-        {
-            "validation": validation_result.model_dump(mode="json"),
-            "extraction": extraction_result.model_dump(mode="json"),
-        }
-    ]
+    assert isinstance(workflows["extractor"].payloads[0], Message)
+    assert workflows["extractor"].payloads[0].raw_representation == ocr_payload
+    assert isinstance(workflows["coherence"].payloads[0], Message)
+    assert workflows["coherence"].payloads[0].raw_representation == extraction_result.model_dump(mode="json")
+    assert isinstance(workflows["validator"].payloads[0], Message)
+    assert workflows["validator"].payloads[0].raw_representation == {
+        "extraction": extraction_result.model_dump(mode="json"),
+        "coherence": coherence_result.model_dump(mode="json"),
+    }
+    assert isinstance(workflows["inventory"].payloads[0], Message)
+    assert workflows["inventory"].payloads[0].raw_representation == {
+        "validation": validation_result.model_dump(mode="json"),
+        "extraction": extraction_result.model_dump(mode="json"),
+    }

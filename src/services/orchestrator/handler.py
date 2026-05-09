@@ -176,7 +176,7 @@ async def handle_message(
     import sys
     import traceback
 
-    print(f"[ORCHESTRATOR] handle_message: deserializing...", file=sys.stderr, flush=True)
+    print("[ORCHESTRATOR] handle_message: deserializing...", file=sys.stderr, flush=True)
     try:
         request = deserialize_message(message)
     except Exception as exc:

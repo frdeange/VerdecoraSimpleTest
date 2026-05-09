@@ -5,6 +5,7 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+from agent_framework import Message
 
 from src.agents.pipeline import AlbaranPipeline, PipelineDocumentInput, PipelineRunResult
 from src.config.agents import AgentsConfig
@@ -78,6 +79,10 @@ async def test_run_workflow_falls_back_to_agent_response_messages() -> None:
     result = await pipeline._run_workflow(workflow, {"payload": True})
 
     assert result == '{"status":"ok"}'
+    assert len(workflow.payloads) == 1
+    assert isinstance(workflow.payloads[0], Message)
+    assert workflow.payloads[0].text == '{"payload": true}'
+    assert workflow.payloads[0].raw_representation == {"payload": True}
 
 
 @pytest.mark.asyncio
@@ -114,20 +119,20 @@ async def test_pipeline_run_with_mocked_agents() -> None:
     assert result.inventory == posting_result
     assert result.routing_decision == "posted"
     assert workflows["triage"].payloads == ["ALBARAN DE ENTREGA"]
-    assert workflows["extractor"].payloads == [{"pages": [{"pageNumber": 1}]}]
-    assert workflows["coherence"].payloads == [extraction_result.model_dump(mode="json")]
-    assert workflows["validator"].payloads == [
-        {
-            "extraction": extraction_result.model_dump(mode="json"),
-            "coherence": coherence_result.model_dump(mode="json"),
-        }
-    ]
-    assert workflows["inventory"].payloads == [
-        {
-            "validation": validation_result.model_dump(mode="json"),
-            "extraction": extraction_result.model_dump(mode="json"),
-        }
-    ]
+    assert isinstance(workflows["extractor"].payloads[0], Message)
+    assert workflows["extractor"].payloads[0].raw_representation == {"pages": [{"pageNumber": 1}]}
+    assert isinstance(workflows["coherence"].payloads[0], Message)
+    assert workflows["coherence"].payloads[0].raw_representation == extraction_result.model_dump(mode="json")
+    assert isinstance(workflows["validator"].payloads[0], Message)
+    assert workflows["validator"].payloads[0].raw_representation == {
+        "extraction": extraction_result.model_dump(mode="json"),
+        "coherence": coherence_result.model_dump(mode="json"),
+    }
+    assert isinstance(workflows["inventory"].payloads[0], Message)
+    assert workflows["inventory"].payloads[0].raw_representation == {
+        "validation": validation_result.model_dump(mode="json"),
+        "extraction": extraction_result.model_dump(mode="json"),
+    }
 
 
 @pytest.mark.asyncio

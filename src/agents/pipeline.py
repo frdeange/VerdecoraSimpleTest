@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 from typing import Any, Mapping
 
+from agent_framework import Message
 from agent_framework.orchestrations import SequentialBuilder
 from azure.identity.aio import DefaultAzureCredential
 from pydantic import BaseModel, Field, ValidationError
@@ -90,7 +92,7 @@ class AlbaranPipeline:
         return SequentialBuilder(participants=[self.agents[stage]]).build()
 
     async def _run_workflow(self, workflow: Any, payload: Any) -> Any:
-        run_result = workflow.run(payload)
+        run_result = workflow.run(self._prepare_workflow_payload(payload))
         resolved = await run_result if hasattr(run_result, "__await__") else run_result
         if hasattr(resolved, "__aiter__"):
             latest_payload: Any = None
@@ -145,6 +147,19 @@ class AlbaranPipeline:
                 "metadata": metadata,
             }
         )
+
+    def _prepare_workflow_payload(self, payload: Any) -> str | Message | list[str | Message]:
+        if isinstance(payload, (str, Message)):
+            return payload
+
+        if isinstance(payload, BaseModel):
+            payload = payload.model_dump(mode="json")
+
+        if isinstance(payload, list) and all(isinstance(item, (str, Message)) for item in payload):
+            return payload
+
+        serialized_payload = json.dumps(payload, ensure_ascii=False, default=str, sort_keys=True)
+        return Message(role="user", contents=[serialized_payload], raw_representation=payload)
 
     async def run(self, input_data: PipelineDocumentInput | dict[str, Any]) -> PipelineRunResult:
         normalized_input = input_data
