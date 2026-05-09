@@ -55,9 +55,12 @@ async def test_pipeline_e2e_happy_path_updates_cosmos_and_preserves_agent_handof
     assert fake_receiver.completed_messages == [message]
     assert not service_bus_client.sent_messages
 
-    assert workflows["triage"].payloads == [ocr_payload["content"]]
-    assert isinstance(workflows["extractor"].payloads[0], Message)
-    assert workflows["extractor"].payloads[0].raw_representation == ocr_payload
+    assert workflows["triage"].payloads[0].startswith(str(ocr_payload["content"]))
+    assert "Key-value pairs:" in workflows["triage"].payloads[0]
+    assert "Table 1" in workflows["triage"].payloads[0]
+    assert workflows["extractor"].payloads[0].startswith(str(ocr_payload["content"]))
+    assert "Key-value pairs:" in workflows["extractor"].payloads[0]
+    assert "Table 1" in workflows["extractor"].payloads[0]
     assert isinstance(workflows["coherence"].payloads[0], Message)
     assert workflows["coherence"].payloads[0].raw_representation == extraction_result.model_dump(mode="json")
     assert isinstance(workflows["validator"].payloads[0], Message)

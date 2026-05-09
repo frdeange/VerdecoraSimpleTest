@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Mapping
+import logging
+from collections import defaultdict
+from collections.abc import Mapping
+from typing import Any
 
 from agent_framework import Message
 from agent_framework.orchestrations import SequentialBuilder
@@ -15,6 +18,8 @@ from src.models.validation import ValidationResult
 
 from .factory import ToolRegistry, create_agents, create_clients
 from .security import sanitize_untrusted_payload
+
+LOGGER = logging.getLogger(__name__)
 
 
 class PipelineDocumentInput(BaseModel):
@@ -166,6 +171,120 @@ class AlbaranPipeline:
         serialized_payload = json.dumps(payload, ensure_ascii=False, default=str, sort_keys=True)
         return Message(role="user", contents=[serialized_payload], raw_representation=payload)
 
+    @staticmethod
+    def _normalize_text_block(value: Any) -> str | None:
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
+
+    def _format_key_value_pairs(self, key_value_pairs: Any) -> str | None:
+        if not isinstance(key_value_pairs, list) or not key_value_pairs:
+            return None
+
+        lines: list[str] = []
+        for pair in key_value_pairs:
+            if not isinstance(pair, Mapping):
+                continue
+            key = self._normalize_text_block(pair.get("key"))
+            value = self._normalize_text_block(pair.get("value"))
+            if key and value:
+                lines.append(f"- {key}: {value}")
+            elif key:
+                lines.append(f"- {key}")
+            elif value:
+                lines.append(f"- {value}")
+
+        if not lines:
+            return None
+        return "Key-value pairs:\n" + "\n".join(lines)
+
+    def _format_table(self, table: Mapping[str, Any], index: int) -> str | None:
+        cells = table.get("cells")
+        if not isinstance(cells, list) or not cells:
+            row_count = table.get("row_count")
+            column_count = table.get("column_count")
+            summary = f"Table {index} ({row_count}x{column_count})" if row_count and column_count else f"Table {index}"
+            return summary
+
+        rows: dict[int, dict[int, str]] = defaultdict(dict)
+        max_column_index = -1
+        for cell in cells:
+            if not isinstance(cell, Mapping):
+                continue
+            row_index = cell.get("row_index")
+            column_index = cell.get("column_index")
+            content = self._normalize_text_block(cell.get("content"))
+            if not isinstance(row_index, int) or not isinstance(column_index, int) or content is None:
+                continue
+            rows[row_index][column_index] = content
+            max_column_index = max(max_column_index, column_index)
+
+        if not rows:
+            return None
+
+        lines = [f"Table {index}:"]
+        for row_index in sorted(rows):
+            row = rows[row_index]
+            columns = [row.get(column_index, "") for column_index in range(max_column_index + 1)]
+            rendered_row = " | ".join(value for value in columns if value).strip()
+            if rendered_row:
+                lines.append(rendered_row)
+
+        return "\n".join(lines) if len(lines) > 1 else None
+
+    def _format_tables(self, tables: Any) -> str | None:
+        if not isinstance(tables, list) or not tables:
+            return None
+
+        rendered_tables = [
+            rendered
+            for index, table in enumerate(tables, start=1)
+            if isinstance(table, Mapping) and (rendered := self._format_table(table, index))
+        ]
+        if not rendered_tables:
+            return None
+        return "\n\n".join(rendered_tables)
+
+    def _build_readable_ocr_text(self, ocr_payload: dict[str, Any] | str | None) -> str | None:
+        if isinstance(ocr_payload, str):
+            return self._normalize_text_block(ocr_payload)
+        if not isinstance(ocr_payload, dict):
+            return None
+
+        sections: list[str] = []
+        if content := self._normalize_text_block(ocr_payload.get("content")):
+            sections.append(content)
+        if kv_section := self._format_key_value_pairs(ocr_payload.get("key_value_pairs")):
+            sections.append(kv_section)
+        if tables_section := self._format_tables(ocr_payload.get("tables")):
+            sections.append(tables_section)
+
+        return "\n\n".join(sections) if sections else None
+
+    def _build_extraction_payload(self, input_data: PipelineDocumentInput) -> str:
+        readable_text = input_data.raw_text or self._build_readable_ocr_text(input_data.ocr_payload)
+        return readable_text or input_data.document_reference
+
+    @staticmethod
+    def _extract_validation_inputs(exc: ValidationError) -> list[str]:
+        extracted_inputs: list[str] = []
+        for error in exc.errors():
+            input_value = error.get("input")
+            if input_value is None:
+                continue
+            normalized = str(input_value).strip()
+            if normalized:
+                extracted_inputs.append(normalized)
+        return extracted_inputs
+
+    @staticmethod
+    def _truncate_for_logs(payload: Any, *, limit: int = 600) -> str:
+        text = str(payload).strip()
+        if len(text) <= limit:
+            return text
+        return f"{text[:limit]}…"
+
     async def run(self, input_data: PipelineDocumentInput | dict[str, Any]) -> PipelineRunResult:
         normalized_input = input_data
         if not isinstance(input_data, PipelineDocumentInput):
@@ -187,11 +306,33 @@ class AlbaranPipeline:
                     skipped_steps=skipped_steps + ["extractor", "coherence", "validation", "inventory"],
                 )
 
-        extraction_payload = (
-            normalized_input.ocr_payload or normalized_input.raw_text or normalized_input.document_reference
-        )
-        extraction_output = await self._run_workflow(self._build_stage_workflow("extractor"), extraction_payload)
+        extraction_payload = self._build_extraction_payload(normalized_input)
+        try:
+            extraction_output = await self._run_workflow(self._build_stage_workflow("extractor"), extraction_payload)
+        except ValidationError as exc:
+            refusal_preview = " | ".join(self._extract_validation_inputs(exc)) or str(exc)
+            LOGGER.error(
+                "Extractor returned a non-JSON response; routing document to HITL. response=%s",
+                self._truncate_for_logs(refusal_preview),
+            )
+            skipped_steps.extend(["coherence", "validation", "inventory"])
+            return PipelineRunResult(
+                triage=triage_result,
+                routing_decision="hitl_review",
+                skipped_steps=skipped_steps,
+            )
         extraction_result = self._coerce_model(AlbaranExtraction, extraction_output)
+        if extraction_result is None:
+            LOGGER.error(
+                "Extractor output could not be parsed as AlbaranExtraction; routing document to HITL. response=%s",
+                self._truncate_for_logs(extraction_output),
+            )
+            skipped_steps.extend(["coherence", "validation", "inventory"])
+            return PipelineRunResult(
+                triage=triage_result,
+                routing_decision="hitl_review",
+                skipped_steps=skipped_steps,
+            )
 
         if self._should_skip_coherence(normalized_input):
             skipped_steps.extend(["coherence", "validation", "inventory"])
