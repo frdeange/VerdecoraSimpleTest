@@ -7,7 +7,12 @@ from unittest.mock import patch
 import pytest
 from agent_framework import Message
 
-from src.agents.pipeline import AlbaranPipeline, PipelineDocumentInput, PipelineRunResult
+from src.agents.pipeline import (
+    MAX_EXTRACTION_INPUT_LENGTH,
+    AlbaranPipeline,
+    PipelineDocumentInput,
+    PipelineRunResult,
+)
 from src.config.agents import AgentsConfig
 from src.models import DocumentType
 from tests.fixtures.sample_albarans import (
@@ -275,6 +280,28 @@ async def test_pipeline_formats_ocr_payload_into_readable_text_for_extractor() -
     assert "Table 1:" in extractor_payload
     assert "Código | Cantidad" in extractor_payload
     assert "ABC-001 | 3" in extractor_payload
+
+
+@pytest.mark.asyncio
+async def test_build_extraction_payload_truncates_oversized_input(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    pipeline = AlbaranPipeline(agents=_named_agents())
+    oversized_payload = "A" * (MAX_EXTRACTION_INPUT_LENGTH + 2000)
+    input_data = PipelineDocumentInput(
+        document_reference="https://storage/account/albaran.pdf",
+        raw_text=oversized_payload,
+    )
+
+    with caplog.at_level("WARNING"):
+        payload = pipeline._build_extraction_payload(input_data)
+
+    assert len(payload) == MAX_EXTRACTION_INPUT_LENGTH
+    assert payload == oversized_payload[:MAX_EXTRACTION_INPUT_LENGTH]
+    assert (
+        f"Extraction payload truncated from {len(oversized_payload)} to {MAX_EXTRACTION_INPUT_LENGTH} chars"
+        in caplog.text
+    )
 
 
 @pytest.mark.asyncio
