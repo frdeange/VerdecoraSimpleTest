@@ -80,3 +80,33 @@ def test_orchestrator_config_defaults_to_processing_queue(monkeypatch: pytest.Mo
     config = OrchestratorConfig()
 
     assert config.extraction_queue_name == "extraccion-in"
+
+
+def test_build_pipeline_input_populates_readable_raw_text() -> None:
+    service = OrchestratorService(config=OrchestratorConfig(service_bus_polling_enabled=False), agent_client=object())
+
+    pipeline_input = service._build_pipeline_input(
+        blob_url="https://storage.example/doc.pdf",
+        metadata={},
+        ocr_payload={
+            "content": "ALBARÁN HERSTERA",
+            "key_value_pairs": [{"key": "pedido", "value": "PO-2026-0456"}],
+            "tables": [
+                {
+                    "row_count": 2,
+                    "column_count": 2,
+                    "cells": [
+                        {"row_index": 0, "column_index": 0, "content": "Artículo"},
+                        {"row_index": 0, "column_index": 1, "content": "Cantidad"},
+                        {"row_index": 1, "column_index": 0, "content": "ABC-001"},
+                        {"row_index": 1, "column_index": 1, "content": "3"},
+                    ],
+                }
+            ],
+        },
+    )
+
+    assert pipeline_input.raw_text is not None
+    assert pipeline_input.raw_text.startswith("ALBARÁN HERSTERA")
+    assert "- pedido: PO-2026-0456" in pipeline_input.raw_text
+    assert "Artículo | Cantidad" in pipeline_input.raw_text
