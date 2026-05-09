@@ -228,6 +228,19 @@ def _normalize_processing_status(status: str | None) -> str | None:
     return normalized
 
 
+def resolve_file_display_status(session_status: str | None, file_status: str | None) -> str:
+    normalized_session = str(session_status or "").strip().lower()
+    normalized_file = str(file_status or "").strip().lower()
+
+    if normalized_file in {"", "pending"}:
+        return "queued" if normalized_session in {"confirmed", "processing"} else "pending"
+    if normalized_file == "queued":
+        return "queued"
+    if normalized_file == "error":
+        return "failed"
+    return normalized_file
+
+
 def _aggregate_status(current_status: str, file_statuses: list[str]) -> str:
     normalized = [status for status in file_statuses if status]
     if not normalized:
@@ -349,5 +362,6 @@ __all__ = [
     "create_upload_session",
     "get_all_user_sessions",
     "get_upload_session",
+    "resolve_file_display_status",
     "update_upload_session",
 ]

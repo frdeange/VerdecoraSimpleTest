@@ -17,7 +17,12 @@ from src.upload_web.models.upload import UploadFile, UploadSession
 from src.upload_web.services.blob_sas import generate_upload_sas_url
 from src.upload_web.services.file_validator import validate_file
 from src.upload_web.services.preflight import run_preflight
-from src.upload_web.services.upload_session import create_upload_session, get_upload_session, update_upload_session
+from src.upload_web.services.upload_session import (
+    create_upload_session,
+    get_upload_session,
+    resolve_file_display_status,
+    update_upload_session,
+)
 
 router = APIRouter(prefix="/sessions", tags=["upload-web-api"])
 CurrentUser = Annotated[AuthenticatedUser, Depends(get_upload_current_user)]
@@ -239,8 +244,8 @@ def session_status(session_id: str, current_user: CurrentUser) -> dict[str, Any]
     files_status = []
     completed_count = 0
     for f in session.files:
-        file_state = getattr(f, "processing_status", None) or "pending"
-        if file_state == "completed":
+        file_state = resolve_file_display_status(session.status, getattr(f, "processing_status", None))
+        if getattr(f, "processing_status", None) == "completed":
             completed_count += 1
         files_status.append(
             {
