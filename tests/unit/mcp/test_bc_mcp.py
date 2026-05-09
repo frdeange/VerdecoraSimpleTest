@@ -56,17 +56,17 @@ def test_bc_tools_normalize_with_unique_agent_framework_names() -> None:
     Without ``self.__name__ = name`` on BCToolBase, normalize_tools wraps every tool as a
     FunctionTool named ``unknown_function`` because it falls back to ``obj.__name__``.
     """
-    client = BCMCPClient(settings=BCMCPSettings(), credential=_FakeCredential())
-    registry = build_bc_tool_registry(client)
+    registry = build_bc_tool_registry(client=SimpleNamespace())
+    expected_names = {
+        "coherence": ["bc.search_vendors", "bc.search_purchase_orders", "bc.search_items"],
+        "validator": ["bc.search_purchase_orders", "bc.get_purchase_order_lines", "bc.search_items"],
+        "inventory": ["bc.create_purchase_receipt", "bc.post_purchase_receipt"],
+    }
 
-    all_tools = [t for tools in registry.values() for t in tools]
-    normalized = normalize_tools(all_tools)
+    for agent_name, tools in expected_names.items():
+        normalized = normalize_tools(registry[agent_name])
+        normalized_names = [tool.name for tool in normalized if isinstance(tool, FunctionTool)]
 
-    names = [t.name if isinstance(t, FunctionTool) else t.name for t in normalized]
-    assert "bc.search_vendors" in names
-    assert "bc.search_purchase_orders" in names
-    assert "bc.get_purchase_order_lines" in names
-    assert "bc.search_items" in names
-    assert "bc.create_purchase_receipt" in names
-    assert "bc.post_purchase_receipt" in names
-    assert "unknown_function" not in names, "BCToolBase.__name__ alias is missing — all tools resolved to unknown_function"
+        assert normalized_names == tools
+        assert len(normalized_names) == len(set(normalized_names))
+        assert "unknown_function" not in normalized_names

@@ -6,6 +6,7 @@ from .albaran import (
     CoherenceCheckResult,
     DocumentType,
     LineItem,
+    SuggestedCorrection,
     TriageResult,
 )
 from .communication import EscalationLevel, HITLDecision, HITLNotification
@@ -32,6 +33,7 @@ __all__ = [
     "PostingResult",
     "PurchaseReceiptPosting",
     "ReconciliationReport",
+    "SuggestedCorrection",
     "SupplierReputation",
     "TriageResult",
     "ValidationResult",
