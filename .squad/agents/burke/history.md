@@ -28,3 +28,8 @@ self.__doc__ = description
 - Branch `fix/bc-tool-names` (commit `8037448`) had the fix but was never merged — Issue #82 PR #85 is the proper merge path
 
 **PR:** #85 — `squad/82-wire-bc-mcp-tools` → master
+
+**Cross-team context:**
+- Ripley's P0 root-cause analysis (2026-05-09) identified BC tool wiring as the critical blocker: agents run with zero tools. This fix unblocks the inventory posting path Kane and Ripley are building.
+- Kane's HITL consumer (PR #84) depends on this fix — the inventory processor needs `orchestrator` to have live BC tool handlers to post inventory state back.
+- Dallas' CI/CD (path-filtered build-deploy) will rebuild and test BC tools on any edit to `src/mcp/bc_mcp/**`.
