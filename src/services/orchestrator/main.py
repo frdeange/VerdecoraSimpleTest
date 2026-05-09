@@ -26,13 +26,21 @@ def configure_logging() -> None:
     log_level_name = os.getenv("LOG_LEVEL", "INFO").upper()
     log_level = getattr(logging, log_level_name, logging.INFO)
     root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
 
-    if not root_logger.handlers:
-        logging.basicConfig(level=log_level, format=LOG_FORMAT, stream=sys.stdout)
-    else:
-        root_logger.setLevel(log_level)
-        for handler in root_logger.handlers:
-            handler.setLevel(log_level)
+    # Always ensure a stdout handler exists (Uvicorn may have added stderr-only handlers)
+    has_stdout = any(
+        isinstance(h, logging.StreamHandler) and getattr(h, "stream", None) is sys.stdout
+        for h in root_logger.handlers
+    )
+    if not has_stdout:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(log_level)
+        handler.setFormatter(logging.Formatter(LOG_FORMAT))
+        root_logger.addHandler(handler)
+
+    for handler in root_logger.handlers:
+        handler.setLevel(log_level)
 
 
 def create_app(config: OrchestratorConfig | None = None) -> FastAPI:
