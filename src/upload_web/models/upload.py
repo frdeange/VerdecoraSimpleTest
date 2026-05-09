@@ -14,7 +14,9 @@ class SessionStatus(StrEnum):
     CONFIRMING = "confirming"
     CONFIRMED = "confirmed"
     PROCESSING = "processing"
+    HITL_PENDING = "hitl_pending"
     COMPLETED = "completed"
+    REJECTED = "rejected"
     FAILED = "failed"
     CREATED = "created"
 

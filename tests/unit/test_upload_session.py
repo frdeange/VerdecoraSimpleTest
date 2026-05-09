@@ -247,6 +247,84 @@ def test_get_all_user_sessions_syncs_processing_status_from_cosmos(monkeypatch: 
 
 
 @pytest.mark.unit
+def test_get_all_user_sessions_preserves_hitl_pending_status_from_processing_records(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeContainer:
+        def __init__(self, items: list[dict[str, object]]) -> None:
+            self.items = items
+
+        def create_item(self, item: dict[str, object]) -> dict[str, object]:
+            self.items.append(dict(item))
+            return item
+
+        def upsert_item(self, item: dict[str, object]) -> dict[str, object]:
+            item_id = str(item["id"])
+            for index, existing in enumerate(self.items):
+                if str(existing.get("id")) == item_id:
+                    self.items[index] = dict(item)
+                    break
+            else:
+                self.items.append(dict(item))
+            return item
+
+        def query_items(self, *, parameters: list[dict[str, object]], **_: object) -> list[dict[str, object]]:
+            params = {str(entry["name"]): entry["value"] for entry in parameters}
+            if "@user_oid" in params and "@session_id" not in params:
+                return [item for item in self.items if item.get("user_oid") == params["@user_oid"]]
+            if "@session_id" in params:
+                return [
+                    item
+                    for item in self.items
+                    if item.get("upload_session_id") == params["@session_id"] and item.get("uploader_oid") == params["@user_oid"]
+                ]
+            return []
+
+    upload_container = FakeContainer(
+        [
+            {
+                "id": "session-hitl",
+                "session_id": "session-hitl",
+                "user_oid": "oid-123",
+                "user_name": "Parker Store",
+                "status": "processing",
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+                "files": [
+                    {
+                        "file_id": "file-1",
+                        "filename": "albaran.pdf",
+                        "blob_path": "session-hitl/albaran.pdf",
+                        "content_type": "application/pdf",
+                        "size_bytes": 1024,
+                        "uploaded_at": datetime.now().isoformat(),
+                    }
+                ],
+            }
+        ]
+    )
+    processing_container = FakeContainer(
+        [
+            {
+                "id": "proc-hitl",
+                "upload_session_id": "session-hitl",
+                "uploader_oid": "oid-123",
+                "status": "hitl_pending",
+                "metadata": {"blob_path": "session-hitl/albaran.pdf"},
+            }
+        ]
+    )
+    monkeypatch.setattr(upload_session, "_get_upload_sessions_container", lambda settings: upload_container)
+    monkeypatch.setattr(upload_session, "_get_processing_records_container", lambda settings: processing_container)
+
+    sessions = upload_session.get_all_user_sessions("oid-123")
+
+    assert len(sessions) == 1
+    assert sessions[0].status == "hitl_pending"
+    assert sessions[0].files[0].processing_status == "hitl_pending"
+
+
+@pytest.mark.unit
 def test_upload_session_falls_back_to_memory_when_cosmos_is_unreachable(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("STORAGE_ACCOUNT_URL", raising=False)
     monkeypatch.delenv("BLOB_ACCOUNT", raising=False)
