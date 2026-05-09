@@ -219,7 +219,7 @@ resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWo
         }
       ]
       scale: {
-        minReplicas: 0
+        minReplicas: 1
         maxReplicas: 3
         rules: [
           {
