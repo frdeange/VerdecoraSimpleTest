@@ -3,7 +3,8 @@
 When a reviewer approves a document via the HITL webform, their decision is
 published to the ``hitl-decisions`` Service Bus topic.  This consumer picks up
 those decisions and:
-  - **approve / modify** → resumes the pipeline at the inventory stage
+  - **approve / modify** → resumes the pipeline at the inventory stage via
+    ``orchestrator.pipeline._run_workflow()``, posting the purchase receipt to BC.
   - **reject** → marks the record as rejected in Cosmos
 
 Wired into the orchestrator lifespan so it runs as a background task alongside
@@ -18,7 +19,6 @@ import logging
 from typing import Any
 
 from src.models.communication import HITLDecision
-from src.models.inventory import PostingResult
 from src.services.hitl_webform.callbacks import HITLCallbackHandler
 
 logger = logging.getLogger(__name__)
@@ -42,19 +42,6 @@ class _CosmosReviewStore:
     async def upsert_item(self, document: dict[str, Any]) -> dict[str, Any]:
         await self._container.upsert_item(document)
         return document
-
-
-async def _inventory_processor_stub(payload: dict[str, Any]) -> PostingResult:
-    """Stub inventory processor — real BC posting via MCP tools.
-
-    In a fully wired system the pipeline's inventory agent would be invoked
-    here.  For now we return a success stub so the HITL loop can close.
-    """
-    logger.info("Inventory processor invoked for HITL-approved payload (stub)")
-    return PostingResult(
-        success=True,
-        message="Inventory posting via HITL approval (stub — BC MCP integration pending full wiring).",
-    )
 
 
 async def run_hitl_decision_consumer(
@@ -95,9 +82,17 @@ async def run_hitl_decision_consumer(
 
                         container = await orchestrator.dependencies.get_processing_container()
                         store = _CosmosReviewStore(container)
+
+                        async def _inventory_processor(payload: dict[str, Any]) -> Any:
+                            """Run the pipeline's inventory stage for HITL-approved decisions."""
+                            return await orchestrator.pipeline._run_workflow(
+                                orchestrator.pipeline._build_stage_workflow("inventory"),
+                                payload,
+                            )
+
                         handler = HITLCallbackHandler(
                             store,
-                            inventory_processor=_inventory_processor_stub,
+                            inventory_processor=_inventory_processor,
                         )
 
                         result = await handler.handle_decision(decision)
