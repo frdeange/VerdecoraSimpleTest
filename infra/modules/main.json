@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "5818126604005021337"
+      "templateHash": "18358197406045266543"
     }
   },
   "parameters": {
@@ -1887,7 +1887,7 @@
           "ingestionQueueName": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'serviceBus'), '2025-04-01').outputs.ingestionQueueName.value]"
           },
-          "extractionQueueName": {
+          "processingQueueName": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'serviceBus'), '2025-04-01').outputs.extraccionQueueName.value]"
           },
           "hitlReviewQueueName": {
@@ -1901,6 +1901,9 @@
           },
           "acsEndpoint": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'acs'), '2025-04-01').outputs.acsEndpoint.value]"
+          },
+          "acsSenderAddress": {
+            "value": "[format('DoNotReply@{0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'acs'), '2025-04-01').outputs.emailSenderDomain.value)]"
           },
           "keyVaultUrl": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'keyVault'), '2025-04-01').outputs.keyVaultUri.value]"
@@ -1934,7 +1937,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "12632874019360599972"
+              "templateHash": "7934149514964368175"
             }
           },
           "parameters": {
@@ -1994,11 +1997,11 @@
                 "description": "Queue name that receives raw BlobCreated events for Flow 0 dedup."
               }
             },
-            "extractionQueueName": {
+            "processingQueueName": {
               "type": "string",
               "defaultValue": "extraccion-in",
               "metadata": {
-                "description": "Queue name consumed by the main orchestrator app."
+                "description": "Queue name consumed by the main orchestrator app after Flow 0 dedup forwards messages."
               }
             },
             "hitlDecisionsTopicName": {
@@ -2025,6 +2028,13 @@
               "type": "string",
               "metadata": {
                 "description": "Azure Communication Services endpoint exposed to the workloads."
+              }
+            },
+            "acsSenderAddress": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "ACS sender email address (e.g. DoNotReply@<domain>.azurecomm.net)."
               }
             },
             "keyVaultUrl": {
@@ -2077,7 +2087,7 @@
               "type": "bool",
               "defaultValue": true,
               "metadata": {
-                "description": "Deploy Container App workloads (apps/jobs). Placeholder images cover first-time infra rollouts before real application images exist."
+                "description": "Deploy Container App workloads (apps/jobs). Defaults use the latest ACR images when explicit image tags are not supplied."
               }
             },
             "reconciliationJobImage": {
@@ -2110,13 +2120,14 @@
             },
             "managedEnvironmentName": "[format('acae-verdecora-{0}', parameters('environment'))]",
             "serviceBusFullyQualifiedNamespace": "[format('{0}.servicebus.windows.net', parameters('serviceBusNamespaceName'))]",
-            "resolvedOrchestratorImage": "[if(empty(parameters('orchestratorImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('orchestratorImage'))]",
-            "resolvedDedupJobImage": "[if(empty(parameters('dedupJobImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('dedupJobImage'))]",
-            "resolvedHitlWebformImage": "[if(empty(parameters('hitlWebformImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('hitlWebformImage'))]",
-            "resolvedEscalationTimerJobImage": "[if(empty(parameters('escalationTimerJobImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('escalationTimerJobImage'))]",
-            "resolvedReconciliationJobImage": "[if(empty(parameters('reconciliationJobImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('reconciliationJobImage'))]",
-            "resolvedLearningJobImage": "[if(empty(parameters('learningJobImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('learningJobImage'))]",
-            "anyCustomImage": "[or(or(or(or(or(not(empty(parameters('orchestratorImage'))), not(empty(parameters('dedupJobImage')))), not(empty(parameters('hitlWebformImage')))), not(empty(parameters('escalationTimerJobImage')))), not(empty(parameters('reconciliationJobImage')))), not(empty(parameters('learningJobImage'))))]"
+            "effectiveAcrLoginServer": "[if(empty(parameters('acrLoginServer')), 'acrvdsdev4vtapr.azurecr.io', parameters('acrLoginServer'))]",
+            "resolvedOrchestratorImage": "[if(empty(parameters('orchestratorImage')), format('{0}/verdecora-orchestrator:latest', variables('effectiveAcrLoginServer')), parameters('orchestratorImage'))]",
+            "resolvedDedupJobImage": "[if(empty(parameters('dedupJobImage')), format('{0}/verdecora-flow0-dedup:latest', variables('effectiveAcrLoginServer')), parameters('dedupJobImage'))]",
+            "resolvedHitlWebformImage": "[if(empty(parameters('hitlWebformImage')), format('{0}/verdecora-hitl-webform:latest', variables('effectiveAcrLoginServer')), parameters('hitlWebformImage'))]",
+            "resolvedEscalationTimerJobImage": "[if(empty(parameters('escalationTimerJobImage')), format('{0}/verdecora-escalation-timer:latest', variables('effectiveAcrLoginServer')), parameters('escalationTimerJobImage'))]",
+            "resolvedReconciliationJobImage": "[if(empty(parameters('reconciliationJobImage')), format('{0}/verdecora-reconciliation:latest', variables('effectiveAcrLoginServer')), parameters('reconciliationJobImage'))]",
+            "resolvedLearningJobImage": "[if(empty(parameters('learningJobImage')), format('{0}/verdecora-learning:latest', variables('effectiveAcrLoginServer')), parameters('learningJobImage'))]",
+            "useAcrRegistry": "[not(empty(variables('effectiveAcrLoginServer')))]"
           },
           "resources": [
             {
@@ -2152,7 +2163,7 @@
                   "dapr": {
                     "enabled": false
                   },
-                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', variables('effectiveAcrLoginServer'), 'identity', 'system')), createArray())]",
                   "ingress": {
                     "external": false,
                     "targetPort": 8080,
@@ -2199,11 +2210,11 @@
                         },
                         {
                           "name": "SERVICEBUS_QUEUE_NAME",
-                          "value": "[parameters('extractionQueueName')]"
+                          "value": "[parameters('processingQueueName')]"
                         },
                         {
                           "name": "EXTRACTION_QUEUE_NAME",
-                          "value": "[parameters('extractionQueueName')]"
+                          "value": "[parameters('processingQueueName')]"
                         },
                         {
                           "name": "HITL_QUEUE_NAME",
@@ -2216,6 +2227,10 @@
                         {
                           "name": "ACS_ENDPOINT",
                           "value": "[parameters('acsEndpoint')]"
+                        },
+                        {
+                          "name": "ACS_SENDER_ADDRESS",
+                          "value": "[parameters('acsSenderAddress')]"
                         },
                         {
                           "name": "KEY_VAULT_URL",
@@ -2233,7 +2248,7 @@
                     }
                   ],
                   "scale": {
-                    "minReplicas": 0,
+                    "minReplicas": 1,
                     "maxReplicas": 3,
                     "rules": [
                       {
@@ -2241,7 +2256,7 @@
                         "custom": {
                           "type": "azure-servicebus",
                           "metadata": {
-                            "queueName": "[parameters('extractionQueueName')]",
+                            "queueName": "[parameters('processingQueueName')]",
                             "namespace": "[parameters('serviceBusNamespaceName')]",
                             "messageCount": "1"
                           },
@@ -2269,7 +2284,7 @@
               "properties": {
                 "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
                 "configuration": {
-                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', variables('effectiveAcrLoginServer'), 'identity', 'system')), createArray())]",
                   "triggerType": "Event",
                   "replicaTimeout": 1800,
                   "replicaRetryLimit": 1,
@@ -2319,7 +2334,7 @@
                         },
                         {
                           "name": "FLOW0_TARGET_QUEUE_NAME",
-                          "value": "[parameters('extractionQueueName')]"
+                          "value": "[parameters('processingQueueName')]"
                         },
                         {
                           "name": "STORAGE_ACCOUNT_URL",
@@ -2363,7 +2378,7 @@
                   "dapr": {
                     "enabled": false
                   },
-                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', variables('effectiveAcrLoginServer'), 'identity', 'system')), createArray())]",
                   "ingress": {
                     "external": true,
                     "allowInsecure": false,
@@ -2404,6 +2419,10 @@
                         {
                           "name": "ACS_ENDPOINT",
                           "value": "[parameters('acsEndpoint')]"
+                        },
+                        {
+                          "name": "ACS_SENDER_ADDRESS",
+                          "value": "[parameters('acsSenderAddress')]"
                         },
                         {
                           "name": "HITL_DECISIONS_TOPIC_NAME",
@@ -2447,7 +2466,7 @@
               "properties": {
                 "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
                 "configuration": {
-                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', variables('effectiveAcrLoginServer'), 'identity', 'system')), createArray())]",
                   "triggerType": "Schedule",
                   "replicaTimeout": 1800,
                   "replicaRetryLimit": 1,
@@ -2480,6 +2499,10 @@
                           "value": "[parameters('acsEndpoint')]"
                         },
                         {
+                          "name": "ACS_SENDER_ADDRESS",
+                          "value": "[parameters('acsSenderAddress')]"
+                        },
+                        {
                           "name": "SERVICE_BUS_NAMESPACE",
                           "value": "[parameters('serviceBusNamespaceName')]"
                         }
@@ -2509,7 +2532,7 @@
               "properties": {
                 "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
                 "configuration": {
-                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', variables('effectiveAcrLoginServer'), 'identity', 'system')), createArray())]",
                   "triggerType": "Schedule",
                   "replicaTimeout": 1800,
                   "replicaRetryLimit": 1,
@@ -2567,7 +2590,7 @@
               "properties": {
                 "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
                 "configuration": {
-                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', variables('effectiveAcrLoginServer'), 'identity', 'system')), createArray())]",
                   "triggerType": "Schedule",
                   "replicaTimeout": 1800,
                   "replicaRetryLimit": 1,
@@ -2795,7 +2818,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "16095119262093221612"
+              "templateHash": "12960010392536979543"
             }
           },
           "parameters": {
@@ -2918,8 +2941,9 @@
               "managed-by": "bicep"
             },
             "managedEnvironmentName": "[format('acae-upload-web-{0}', parameters('environment'))]",
-            "resolvedUploadWebImage": "[if(empty(parameters('uploadWebImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('uploadWebImage'))]",
-            "useAcrRegistry": "[not(empty(parameters('uploadWebImage')))]",
+            "effectiveAcrLoginServer": "[if(empty(parameters('acrLoginServer')), 'acrvdsdev4vtapr.azurecr.io', parameters('acrLoginServer'))]",
+            "resolvedUploadWebImage": "[if(empty(parameters('uploadWebImage')), format('{0}/verdecora-upload-web:latest', variables('effectiveAcrLoginServer')), parameters('uploadWebImage'))]",
+            "useAcrRegistry": "[not(empty(variables('effectiveAcrLoginServer')))]",
             "rawBlobContainerName": "albaranes-raw",
             "serviceBusFullyQualifiedNamespace": "[format('{0}.servicebus.windows.net', parameters('serviceBusNamespaceName'))]",
             "extractionQueueName": "extraccion-queue",
@@ -2966,7 +2990,7 @@
                 "configuration": {
                   "activeRevisionsMode": "Single",
                   "secrets": "[if(variables('authEnabled'), createArray(createObject('name', variables('authSecretName'), 'value', parameters('entraClientSecret'))), createArray())]",
-                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', variables('effectiveAcrLoginServer'), 'identity', 'system')), createArray())]",
                   "ingress": {
                     "external": true,
                     "allowInsecure": false,
