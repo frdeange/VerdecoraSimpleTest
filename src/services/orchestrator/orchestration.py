@@ -4,6 +4,7 @@ import asyncio
 import base64
 import hashlib
 import json
+import logging
 import os
 from typing import Any
 from urllib.parse import urlparse
@@ -14,6 +15,8 @@ from src.agents.pipeline import AlbaranPipeline, PipelineDocumentInput
 from src.config.agents import get_agents_config
 
 from .config import OrchestratorConfig, get_orchestrator_config
+
+LOGGER = logging.getLogger(__name__)
 
 
 class OrchestrationRequest(BaseModel):
@@ -345,6 +348,13 @@ class OrchestratorService:
             normalized_request = OrchestrationRequest.model_validate(request)
 
         processing_id = self._build_processing_id(normalized_request)
+        current_step = "write_processing_status"
+        LOGGER.info(
+            "Starting document processing: processing_id=%s blob_url=%s metadata_keys=%s",
+            processing_id,
+            normalized_request.blob_url,
+            sorted(normalized_request.metadata.keys()),
+        )
         await self._write_processing_status(
             processing_id=processing_id,
             blob_url=normalized_request.blob_url,
@@ -353,8 +363,21 @@ class OrchestratorService:
         )
 
         try:
+            current_step = "download_blob"
+            LOGGER.info("Downloading blob... processing_id=%s blob_url=%s", processing_id, normalized_request.blob_url)
             blob_bytes = await self.download_blob(normalized_request.blob_url)
+            LOGGER.info(
+                "Blob download completed: processing_id=%s downloaded_bytes=%d",
+                processing_id,
+                len(blob_bytes),
+            )
+
+            current_step = "analyze_document"
+            LOGGER.info("Analyzing document... processing_id=%s blob_url=%s", processing_id, normalized_request.blob_url)
             ocr_payload = await self.analyze_document(normalized_request.blob_url, document_bytes=blob_bytes)
+
+            current_step = "run_pipeline"
+            LOGGER.info("Running pipeline... processing_id=%s blob_url=%s", processing_id, normalized_request.blob_url)
             pipeline_result = await self.pipeline.run(
                 self._build_pipeline_input(
                     blob_url=normalized_request.blob_url,
@@ -362,6 +385,13 @@ class OrchestratorService:
                     ocr_payload=ocr_payload,
                 )
             )
+            LOGGER.info(
+                "Pipeline completed: processing_id=%s routing_decision=%s",
+                processing_id,
+                pipeline_result.routing_decision,
+            )
+
+            current_step = "write_processing_record"
             result = OrchestrationResult(
                 processing_id=processing_id,
                 blob_url=normalized_request.blob_url,
@@ -373,21 +403,44 @@ class OrchestratorService:
             )
             await self._write_processing_record(result)
             if result.status == "hitl_pending":
+                current_step = "send_hitl_message"
                 await self._send_hitl_message(result)
+                current_step = "send_hitl_email_notification"
                 await self._send_hitl_email_notification(result)
+            LOGGER.info(
+                "Document processing completed: processing_id=%s status=%s routing_decision=%s",
+                processing_id,
+                result.status,
+                result.routing_decision,
+            )
             return result
         except Exception as exc:
+            error_message = f"{current_step}: {exc}"
+            LOGGER.exception(
+                "Document processing failed: processing_id=%s blob_url=%s step=%s",
+                processing_id,
+                normalized_request.blob_url,
+                current_step,
+            )
             failure_result = OrchestrationResult(
                 processing_id=processing_id,
                 blob_url=normalized_request.blob_url,
                 status="failed",
                 routing_decision="failed",
                 metadata=normalized_request.metadata,
-                error=str(exc),
+                error=error_message,
             )
-            await self._write_processing_record(failure_result)
+            try:
+                await self._write_processing_record(failure_result)
+            except Exception:
+                LOGGER.exception(
+                    "Failed to persist failure record: processing_id=%s blob_url=%s",
+                    processing_id,
+                    normalized_request.blob_url,
+                )
             raise OrchestrationError(
-                f"Processing failed for {normalized_request.blob_url}", result=failure_result
+                f"Processing failed during {current_step} for {normalized_request.blob_url}: {exc}",
+                result=failure_result,
             ) from exc
 
 

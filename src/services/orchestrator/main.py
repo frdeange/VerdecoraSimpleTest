@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import os
+import sys
 from contextlib import asynccontextmanager, suppress
 from typing import AsyncIterator, cast
 
@@ -12,12 +15,28 @@ from .health import router as health_router
 from .hitl_consumer import run_hitl_decision_consumer
 from .orchestration import OrchestrationError, OrchestrationRequest, OrchestratorService
 
+LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
+
 
 class ManualProcessRequest(OrchestrationRequest):
     pass
 
 
+def configure_logging() -> None:
+    log_level_name = os.getenv("LOG_LEVEL", "INFO").upper()
+    log_level = getattr(logging, log_level_name, logging.INFO)
+    root_logger = logging.getLogger()
+
+    if not root_logger.handlers:
+        logging.basicConfig(level=log_level, format=LOG_FORMAT, stream=sys.stdout)
+    else:
+        root_logger.setLevel(log_level)
+        for handler in root_logger.handlers:
+            handler.setLevel(log_level)
+
+
 def create_app(config: OrchestratorConfig | None = None) -> FastAPI:
+    configure_logging()
     resolved_config = config or get_orchestrator_config()
 
     @asynccontextmanager
@@ -67,6 +86,7 @@ app = create_app()
 def main() -> None:
     import uvicorn
 
+    configure_logging()
     uvicorn.run("src.services.orchestrator.main:app", host="0.0.0.0", port=8080, reload=False)
 
 
