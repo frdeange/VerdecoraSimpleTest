@@ -60,7 +60,12 @@ class AlbaranPipeline:
         if agents is None:
             if self.gpt5_client is None or self.gpt5_mini_client is None:
                 self.gpt5_client, self.gpt5_mini_client = create_clients(self.project_endpoint, self.credential)
-            self.agents = create_agents(self.gpt5_client, self.gpt5_mini_client, mcp_tools=mcp_tools)
+            self.agents = create_agents(
+                self.gpt5_client,
+                self.gpt5_mini_client,
+                config=self.config,
+                mcp_tools=mcp_tools,
+            )
         else:
             self.agents = dict(agents)
 

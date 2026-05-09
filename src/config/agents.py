@@ -26,6 +26,11 @@ class AgentModelSettings(BaseModel):
     gpt5_mini_deployment: str = Field(default_factory=lambda: os.getenv("GPT5_MINI_DEPLOYMENT", "gpt-5-mini"))
 
 
+class AgentTokenSettings(BaseModel):
+    default_max_tokens: int = Field(default_factory=lambda: int(os.getenv("AGENT_MAX_TOKENS", "1200")), gt=0)
+    extractor_max_tokens: int = Field(default_factory=lambda: int(os.getenv("EXTRACTOR_MAX_TOKENS", "16384")), gt=0)
+
+
 class AgentThresholdSettings(BaseModel):
     triage_manual_review_threshold: float = Field(
         default_factory=lambda: float(os.getenv("TRIAGE_MANUAL_REVIEW_THRESHOLD", "0.65"))
@@ -38,6 +43,7 @@ class AgentThresholdSettings(BaseModel):
 class AgentsConfig(BaseModel):
     endpoints: AzureServiceEndpoints = Field(default_factory=AzureServiceEndpoints)
     models: AgentModelSettings = Field(default_factory=AgentModelSettings)
+    tokens: AgentTokenSettings = Field(default_factory=AgentTokenSettings)
     thresholds: AgentThresholdSettings = Field(default_factory=AgentThresholdSettings)
     skip_triage_suppliers: tuple[str, ...] = Field(
         default_factory=lambda: tuple(

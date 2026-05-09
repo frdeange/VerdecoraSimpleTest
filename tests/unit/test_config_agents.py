@@ -22,6 +22,8 @@ def test_agents_config_defaults() -> None:
     )
     assert config.models.gpt5_deployment == "gpt-5"
     assert config.models.gpt5_mini_deployment == "gpt-5-mini"
+    assert config.tokens.default_max_tokens == 1200
+    assert config.tokens.extractor_max_tokens == 16384
     assert config.thresholds.triage_manual_review_threshold == pytest.approx(0.65)
     assert config.thresholds.low_value_coherence_threshold == pytest.approx(250.0)
     assert config.skip_triage_suppliers == ()
@@ -34,6 +36,8 @@ def test_agents_config_defaults() -> None:
         "DOCUMENT_INTELLIGENCE_ENDPOINT": "https://example-docint.cognitiveservices.azure.com/",
         "GPT5_DEPLOYMENT": "gpt-5-custom",
         "GPT5_MINI_DEPLOYMENT": "gpt-5-mini-custom",
+        "AGENT_MAX_TOKENS": "2400",
+        "EXTRACTOR_MAX_TOKENS": "20000",
         "TRIAGE_MANUAL_REVIEW_THRESHOLD": "0.7",
         "LOW_VALUE_COHERENCE_THRESHOLD": "99.5",
         "SKIP_TRIAGE_SUPPLIERS": "HERSTERA, ROYAL CANIN",
@@ -48,6 +52,8 @@ def test_agents_config_reads_environment_overrides() -> None:
     assert config.endpoints.document_intelligence_endpoint == "https://example-docint.cognitiveservices.azure.com/"
     assert config.models.gpt5_deployment == "gpt-5-custom"
     assert config.models.gpt5_mini_deployment == "gpt-5-mini-custom"
+    assert config.tokens.default_max_tokens == 2400
+    assert config.tokens.extractor_max_tokens == 20000
     assert config.thresholds.triage_manual_review_threshold == pytest.approx(0.7)
     assert config.thresholds.low_value_coherence_threshold == pytest.approx(99.5)
     assert config.skip_triage_suppliers == ("HERSTERA", "ROYAL CANIN")
@@ -58,6 +64,7 @@ def test_agents_config_reads_environment_overrides() -> None:
     [
         {"thresholds": {"triage_manual_review_threshold": "invalid"}},
         {"models": {"gpt5_deployment": None}},
+        {"tokens": {"extractor_max_tokens": 0}},
         {"skip_triage_suppliers": None},
     ],
 )
