@@ -28,7 +28,7 @@ param serviceBusNamespaceName string
 param ingestionQueueName string = 'extraccion-queue'
 
 @description('Queue name consumed by the main orchestrator app.')
-param extractionQueueName string = 'extraccion-in'
+param extractionQueueName string = 'extraccion-queue'
 
 @description('Topic name used by the HITL webform to publish review decisions.')
 param hitlDecisionsTopicName string = 'hitl-decisions'
