@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from src.agents.factory import create_agents, create_clients
+from src.config.agents import AgentsConfig
 from src.models.albaran import AlbaranExtraction, CoherenceCheckResult, TriageResult
 from src.models.inventory import PostingResult
 from src.models.learning import LearningReport
@@ -80,10 +81,12 @@ def test_create_agents_returns_expected_keys_and_models(mock_agent: Any) -> None
     assert isinstance(triage, StructuredAgentStub)
     assert triage.kwargs["client"] == "gpt5-mini-client"
     assert triage.kwargs["default_options"]["response_format"] is TriageResult
+    assert triage.kwargs["default_options"]["max_tokens"] == 1200
     assert "document triage specialist" in triage.kwargs["instructions"]
 
     assert extractor.kwargs["client"] == "gpt5-client"
     assert extractor.kwargs["default_options"]["response_format"] is AlbaranExtraction
+    assert extractor.kwargs["default_options"]["max_tokens"] == 16384
     assert extractor.kwargs["tools"] == tool_registry["extractor"]
 
     assert coherence.kwargs["client"] == "gpt5-mini-client"
@@ -99,10 +102,10 @@ def test_create_agents_returns_expected_keys_and_models(mock_agent: Any) -> None
     assert communication.kwargs["tools"] == tool_registry["communication"]
     assert "español" in communication.kwargs["instructions"]
 
-    assert reconciliation.kwargs["response_format"] is ReconciliationReport
+    assert reconciliation.kwargs["default_options"]["response_format"] is ReconciliationReport
     assert "cosmos.query_documents" in reconciliation.kwargs["instructions"]
 
-    assert learning.kwargs["response_format"] is LearningReport
+    assert learning.kwargs["default_options"]["response_format"] is LearningReport
     assert "feature_flags.set_supplier_config" in learning.kwargs["instructions"]
 
 
@@ -130,3 +133,21 @@ def test_create_agents_omits_optional_tool_lists_when_not_provided() -> None:
     }
     tool_payloads = [call.get("tools") for call in captured_calls if "tools" in call]
     assert all(isinstance(payload, Sequence) for payload in tool_payloads)
+
+
+def test_create_agents_uses_configured_token_limits() -> None:
+    captured_calls: list[dict[str, Any]] = []
+
+    def fake_agent(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        if args:
+            kwargs["client"] = args[0]
+        captured_calls.append(kwargs)
+        return kwargs
+
+    config = AgentsConfig.model_validate({"tokens": {"default_max_tokens": 2400, "extractor_max_tokens": 20000}})
+
+    with patch("src.agents.factory.Agent", side_effect=fake_agent):
+        agents = create_agents("gpt5-client", "gpt5-mini-client", config=config)
+
+    assert agents["triage"]["default_options"]["max_tokens"] == 2400
+    assert agents["extractor"]["default_options"]["max_tokens"] == 20000

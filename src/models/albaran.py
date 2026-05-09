@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DocumentType(str, Enum):
@@ -57,11 +57,20 @@ class TriageResult(BaseModel):
     reasoning: str
 
 
+class SuggestedCorrection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    field_name: str
+    suggested_value: str
+
+
 class CoherenceCheckResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     is_coherent: bool
     overall_confidence: float = Field(ge=0.0, le=1.0)
     header_issues: list[str] = Field(default_factory=list)
     line_item_issues: list[str] = Field(default_factory=list)
     bc_match_found: bool = False
     matched_po_number: str | None = None
-    suggested_corrections: dict[str, str] = Field(default_factory=dict)
+    suggested_corrections: list[SuggestedCorrection] = Field(default_factory=list)
