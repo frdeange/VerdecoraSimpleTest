@@ -80,6 +80,24 @@
 - **Immediate actions:** (1) Rebuild upload-web, (2) configure ACR, (3) re-test full flow.
 - **CI/CD safeguards:** Always specify `--image` in `az containerapp update`; configure `--registry-server` before deploy; pin Docker base images in IaC.
 
+### Kiko de Angel — DevOps CI/CD Enforcement (Directive, 2026-05-09T22:16:47Z)
+- **Date:** 2026-05-09
+- **Decision:** Enforce strict DevOps policy: Issue → Branch → PR → Review → Merge → Auto-deploy. No manual Docker builds, ACR pushes, or ACA updates.
+- **Why:** Dallas violation: bypassed CI/CD pipeline with manual push. CI/CD auto-deploy is mandatory.
+- **Process:** All work starts from GitHub issue, feature branch (squad/{issue}-{slug}), commits reference issue, PR to main, review, merge triggers build-deploy.yml automatically.
+- **Exception:** `workflow_dispatch` only for emergency CI/CD pipeline failures; never manual container ops.
+- **Status:** Directive captured and distributed to all agents (Issue #88).
+
+### Kane — Message Flow & Queue Topology Diagnosis (Issue #87, 2026-05-09)
+- **Date:** 2026-05-09
+- **Root Cause:** Queue topology collapsed — dedup and orchestrator both consume `extraccion-queue` (should be two-queue ingress→processing flow).
+- **What Happened:** Upload-web confirm → extraccion-queue → orchestrator consumed directly → hitl_pending (dedup bypassed, found queue empty).
+- **Intended Flow:** extraccion-queue (ingress) → dedup → extraccion-in (processing) → orchestrator
+- **Immediate Fix:** Dedup target `FLOW0_TARGET_QUEUE_NAME=extraccion-in`; orchestrator `EXTRACTION_QUEUE_NAME=extraccion-in` + KEDA rule.
+- **IaC Cleanup:** Split `extractionQueueName` param into `ingestionQueueName` (extraccion-queue) and `processingQueueName` (extraccion-in).
+- **Alignment:** Unify naming across `.env.example`, Bicep, app env vars, docs.
+- **Status:** E2E flow confirmed working ✅ (hitl_pending state reached); queue wiring is next immediate fix.
+
 ## Governance
 
 - All meaningful changes require team consensus
