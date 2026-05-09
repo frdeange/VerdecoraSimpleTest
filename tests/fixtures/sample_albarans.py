@@ -12,6 +12,7 @@ from src.models import (
     PostingLineItem,
     PostingResult,
     PurchaseReceiptPosting,
+    SuggestedCorrection,
     TriageResult,
     ValidationResult,
 )
@@ -171,7 +172,10 @@ def sample_coherence_result(
         line_item_issues=list(line_item_issues or []),
         bc_match_found=bc_match_found,
         matched_po_number=matched_po_number,
-        suggested_corrections=dict(suggested_corrections or {}),
+        suggested_corrections=[
+            SuggestedCorrection(field_name=field_name, suggested_value=suggested_value)
+            for field_name, suggested_value in (suggested_corrections or {}).items()
+        ],
     )
 
 

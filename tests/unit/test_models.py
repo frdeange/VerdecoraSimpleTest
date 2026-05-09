@@ -3,8 +3,9 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 
 import pytest
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
+from src.agents.communication_agent import CommunicationSummary
 from src.models import (
     AlbaranExtraction,
     AlbaranHeader,
@@ -17,8 +18,10 @@ from src.models import (
     LineComparison,
     LineItem,
     PostingLineItem,
+    PostingResult,
     PurchaseReceiptPosting,
     ReconciliationReport,
+    SuggestedCorrection,
     SupplierReputation,
     TriageResult,
     ValidationResult,
@@ -34,6 +37,18 @@ from tests.fixtures.sample_albarans import (
 )
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.mark.parametrize(
+    "schema_model",
+    [TriageResult, AlbaranExtraction, CoherenceCheckResult, ValidationResult, PostingResult, CommunicationSummary],
+)
+def test_agent_response_schemas_keep_required_keys_in_properties(schema_model: type[BaseModel]) -> None:
+    schema = schema_model.model_json_schema()
+    properties = schema.get("properties", {})
+    missing = [key for key in schema.get("required", []) if key not in properties]
+
+    assert missing == []
 
 
 def test_albaran_header_supports_defaults_and_optional_fields() -> None:
@@ -171,7 +186,7 @@ def test_coherence_check_result_defaults_and_issue_lists() -> None:
     assert result.line_item_issues == []
     assert result.bc_match_found is False
     assert result.matched_po_number is None
-    assert result.suggested_corrections == {}
+    assert result.suggested_corrections == []
 
 
 def test_coherence_check_result_serialization_round_trip() -> None:
@@ -189,7 +204,28 @@ def test_coherence_check_result_serialization_round_trip() -> None:
     restored = CoherenceCheckResult.model_validate(dumped)
 
     assert restored == coherence
-    assert dumped["suggested_corrections"]["matched_po_number"] == "PO-2026-0457"
+    assert dumped["suggested_corrections"] == [
+        {"field_name": "matched_po_number", "suggested_value": "PO-2026-0457"}
+    ]
+
+
+def test_coherence_check_result_schema_uses_structured_corrections() -> None:
+    schema = CoherenceCheckResult.model_json_schema()
+
+    assert "suggested_corrections" in schema["properties"]
+    assert schema["properties"]["suggested_corrections"]["type"] == "array"
+    correction_schema = schema["$defs"]["SuggestedCorrection"]
+    assert correction_schema["required"] == ["field_name", "suggested_value"]
+    assert correction_schema["additionalProperties"] is False
+
+
+def test_suggested_correction_forbids_extra_fields() -> None:
+    with pytest.raises(ValidationError):
+        SuggestedCorrection(
+            field_name="matched_po_number",
+            suggested_value="PO-2026-0457",
+            unsupported="value",
+        )
 
 
 def test_validation_result_defaults_and_round_trip() -> None:
