@@ -8,7 +8,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from src.shared.auth.entra import AuthenticatedUser
 from src.upload_web.middleware import get_upload_current_user
-from src.upload_web.services.upload_session import create_upload_session, get_all_user_sessions
+from src.upload_web.services.upload_session import (
+    create_upload_session,
+    get_all_user_sessions,
+    resolve_file_display_status,
+)
 
 router = APIRouter(tags=["upload-web"])
 CurrentUser = Annotated[AuthenticatedUser, Depends(get_upload_current_user)]
@@ -216,6 +220,13 @@ async def upload_status(request: Request, session_id: str, current_user: Current
     total = len(session.files)
     completed = sum(1 for f in session.files if getattr(f, "processing_status", None) == "completed")
     progress = (completed / total * 100) if total > 0 else 0
+    file_rows = [
+        {
+            "file": upload_file,
+            "display_status": resolve_file_display_status(session.status, getattr(upload_file, "processing_status", None)),
+        }
+        for upload_file in session.files
+    ]
 
     return request.app.state.templates.TemplateResponse(
         request,
@@ -227,6 +238,7 @@ async def upload_status(request: Request, session_id: str, current_user: Current
             session=session,
             total=total,
             completed=completed,
+            file_rows=file_rows,
             progress=round(progress, 1),
         ),
     )

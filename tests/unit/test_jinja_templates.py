@@ -125,6 +125,49 @@ def test_upload_page_creates_session_and_binds_preflight_urls() -> None:
 
 
 @pytest.mark.unit
+def test_upload_page_centers_footer_instructions() -> None:
+    app = create_app()
+
+    with TestClient(app) as client:
+        response = client.get("/upload", headers=_auth_headers("Parker Flow"))
+
+    assert response.status_code == 200
+    assert 'upload-footer-note rounded-3xl bg-white/80 p-5 text-center text-sm leading-6 text-slate-600' in response.text
+    assert "Aceptamos PDF e imágenes" in response.text
+
+
+@pytest.mark.unit
+def test_status_page_shows_en_cola_before_file_processing_starts() -> None:
+    app = create_app()
+
+    with TestClient(app) as client:
+        headers = _auth_headers("Parker Flow")
+        client.get("/upload", headers=headers)
+
+        sessions = upload_session.get_all_user_sessions("oid-123")
+        assert len(sessions) == 1
+        session = sessions[0]
+        session.files.append(
+            UploadFile(
+                file_id="file-queued",
+                filename="queued.pdf",
+                blob_path=f"{session.session_id}/queued.pdf",
+                content_type="application/pdf",
+                size_bytes=1024,
+            )
+        )
+        session.status = "processing"
+        upload_session.update_upload_session(session)
+
+        response = client.get(f"/upload/{session.session_id}/status", headers=headers)
+
+    assert response.status_code == 200
+    assert "En proceso" in response.text
+    assert "En cola" in response.text
+    assert "Pendiente</span>" not in response.text
+
+
+@pytest.mark.unit
 def test_my_uploads_page_uses_relative_routes() -> None:
     app = create_app()
 
