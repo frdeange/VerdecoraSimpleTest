@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from typing import Any
 
 from src.services.flow0_dedup.dedup_handler import parse_event_grid_payload
 from src.services.flow0_dedup.models import ForwardedExtractionMessage
 
 from .orchestration import OrchestrationError, OrchestrationRequest, OrchestrationResult, OrchestratorService
+
+LOGGER = logging.getLogger(__name__)
 
 
 class QueueMessageError(ValueError):
@@ -174,11 +177,19 @@ async def handle_message(
     try:
         result = await orchestrator.process_document(request)
     except OrchestrationError as exc:
+        error_description = exc.result.error or str(exc)
+        LOGGER.exception(
+            "Message processing failed: processing_id=%s delivery_count=%s dead_letter=%s error=%s",
+            exc.result.processing_id,
+            getattr(message, "delivery_count", 1),
+            getattr(message, "delivery_count", 1) >= orchestrator.config.max_delivery_attempts,
+            error_description,
+        )
         if getattr(message, "delivery_count", 1) >= orchestrator.config.max_delivery_attempts:
             await receiver.dead_letter_message(
                 message,
                 reason="orchestration_failed",
-                error_description=str(exc),
+                error_description=error_description,
             )
         else:
             await receiver.abandon_message(message)
