@@ -191,7 +191,7 @@ module containerApps './container-apps.bicep' = {
     applicationInsightsConnectionString: monitoring.outputs.applicationInsightsConnectionString
     serviceBusNamespaceName: serviceBus.outputs.serviceBusNamespaceName
     ingestionQueueName: serviceBus.outputs.ingestionQueueName
-    extractionQueueName: serviceBus.outputs.ingestionQueueName
+    processingQueueName: serviceBus.outputs.extraccionQueueName
     hitlReviewQueueName: serviceBus.outputs.hitlReviewQueueName
     hitlDecisionsTopicName: serviceBus.outputs.hitlDecisionsTopicName
     storageAccountUrl: storageAccountUrl

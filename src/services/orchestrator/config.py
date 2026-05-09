@@ -24,7 +24,7 @@ class OrchestratorConfig(BaseModel):
     service_bus_namespace: str = Field(
         default_factory=lambda: _get_env("SERVICE_BUS_NAMESPACE", _get_env("SERVICEBUS_NAMESPACE", "verdecora-dev"))
     )
-    extraction_queue_name: str = Field(default_factory=lambda: _get_env("EXTRACTION_QUEUE_NAME", "extraction"))
+    extraction_queue_name: str = Field(default_factory=lambda: _get_env("EXTRACTION_QUEUE_NAME", "extraccion-in"))
     hitl_queue_name: str = Field(default_factory=lambda: _get_env("HITL_QUEUE_NAME", "hitl-review"))
     cosmos_endpoint: str = Field(default_factory=lambda: _get_env("COSMOS_ENDPOINT", "https://localhost:8081"))
     database_name: str = Field(

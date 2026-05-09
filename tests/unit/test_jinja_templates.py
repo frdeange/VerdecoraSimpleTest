@@ -217,6 +217,38 @@ def test_my_uploads_page_applies_status_filter_and_highlights_active_button() ->
 
 
 @pytest.mark.unit
+def test_my_uploads_page_renders_hitl_pending_badge() -> None:
+    app = create_app()
+
+    with TestClient(app) as client:
+        headers = _auth_headers("Parker Flow")
+        client.get("/upload", headers=headers)
+
+        sessions = upload_session.get_all_user_sessions("oid-123")
+        assert len(sessions) == 1
+        session = sessions[0]
+        session.files.append(
+            UploadFile(
+                file_id="file-hitl",
+                filename="review.pdf",
+                blob_path=f"{session.session_id}/review.pdf",
+                content_type="application/pdf",
+                size_bytes=1024,
+                processing_status="hitl_pending",
+            )
+        )
+        session.status = "hitl_pending"
+        upload_session.update_upload_session(session)
+
+        response = client.get("/mis-albaranes?status=hitl_pending", headers=headers)
+
+    assert response.status_code == 200
+    assert "review.pdf" in response.text
+    assert "Pendiente revisión" in response.text
+    assert 'href="/mis-albaranes?status=hitl_pending"' in response.text
+
+
+@pytest.mark.unit
 def test_my_uploads_filter_route_redirects_to_canonical_status_query() -> None:
     app = create_app()
 

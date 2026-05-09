@@ -72,3 +72,11 @@ async def test_process_document_logs_pipeline_step_on_success(caplog: pytest.Log
     assert "Analyzing document..." in caplog.text
     assert "Running pipeline..." in caplog.text
     assert "Document processing completed" in caplog.text
+
+
+def test_orchestrator_config_defaults_to_processing_queue(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("EXTRACTION_QUEUE_NAME", raising=False)
+
+    config = OrchestratorConfig()
+
+    assert config.extraction_queue_name == "extraccion-in"

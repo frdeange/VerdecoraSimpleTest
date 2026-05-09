@@ -10,3 +10,4 @@
 - Burke's BC tool fix (PR #85) unblocks this work — the inventory processor now has live BC tool handlers to call.
 - Ripley's orchestrator P0 (root-cause analysis 2026-05-09) diagnosed that HITL consumer was stubbed out and the decision topic had no consumer; Kane fixed the consumer half; Ripley fixed the orchestrator image + upload-web dependency.
 - Dallas' CI/CD (path-filtered build-deploy) will test HITL consumer on any edit to `src/services/orchestrator/**` or `src/mcp/bc_mcp/**`.
+- **2026-05-09:** Fixed issue #87 E2E pipeline regressions on `squad/87-fix-e2e-pipeline`. Upload-web already synced `processing-records`, so the real bug was status normalization: `hitl_pending` was collapsed back to `processing`. Preserved `hitl_pending`/`rejected` as terminal UI states in upload-web and aligned orchestrator defaults to consume `extraccion-in`; `.env.example` now documents the two-queue topology (`extraccion-queue` → `extraccion-in`).

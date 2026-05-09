@@ -209,11 +209,21 @@ def _normalize_processing_status(status: str | None) -> str | None:
     normalized = str(status or "").strip().lower()
     if not normalized:
         return None
-    if normalized in {"created", "uploading", "preflight", "confirmed", "processing", "completed", "failed"}:
+    if normalized in {
+        "created",
+        "uploading",
+        "preflight",
+        "confirmed",
+        "processing",
+        "hitl_pending",
+        "completed",
+        "rejected",
+        "failed",
+    }:
         return normalized
-    if normalized in {"queued", "pending", "hitl_pending"}:
+    if normalized in {"queued", "pending"}:
         return "processing"
-    if normalized in {"rejected", "error"}:
+    if normalized in {"error"}:
         return "failed"
     return normalized
 
@@ -224,11 +234,15 @@ def _aggregate_status(current_status: str, file_statuses: list[str]) -> str:
         return current_status
     if any(status == "processing" for status in normalized):
         return "processing"
+    if any(status == "hitl_pending" for status in normalized):
+        return "hitl_pending"
     if any(status == "failed" for status in normalized):
         return "failed"
+    if any(status == "rejected" for status in normalized):
+        return "rejected"
     if all(status == "completed" for status in normalized):
         return "completed"
-    if any(status == "completed" for status in normalized):
+    if any(status in {"completed", "rejected"} for status in normalized):
         return "processing"
     return current_status
 

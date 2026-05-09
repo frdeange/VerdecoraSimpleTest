@@ -27,8 +27,8 @@ param serviceBusNamespaceName string
 @description('Queue name that receives raw BlobCreated events for Flow 0 dedup.')
 param ingestionQueueName string = 'extraccion-queue'
 
-@description('Queue name consumed by the main orchestrator app.')
-param extractionQueueName string = 'extraccion-queue'
+@description('Queue name consumed by the main orchestrator app after Flow 0 dedup forwards messages.')
+param processingQueueName string = 'extraccion-in'
 
 @description('Topic name used by the HITL webform to publish review decisions.')
 param hitlDecisionsTopicName string = 'hitl-decisions'
@@ -181,11 +181,11 @@ resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWo
             }
             {
               name: 'SERVICEBUS_QUEUE_NAME'
-              value: extractionQueueName
+              value: processingQueueName
             }
             {
               name: 'EXTRACTION_QUEUE_NAME'
-              value: extractionQueueName
+              value: processingQueueName
             }
             {
               name: 'HITL_QUEUE_NAME'
@@ -227,7 +227,7 @@ resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWo
             custom: {
               type: 'azure-servicebus'
               metadata: {
-                queueName: extractionQueueName
+                queueName: processingQueueName
                 namespace: serviceBusNamespaceName
                 messageCount: '1'
               }
@@ -307,7 +307,7 @@ resource flow0DedupJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads) {
             }
             {
               name: 'FLOW0_TARGET_QUEUE_NAME'
-              value: extractionQueueName
+              value: processingQueueName
             }
             {
               name: 'STORAGE_ACCOUNT_URL'

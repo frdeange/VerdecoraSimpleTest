@@ -13,14 +13,26 @@ from src.upload_web.services.upload_session import create_upload_session, get_al
 router = APIRouter(tags=["upload-web"])
 CurrentUser = Annotated[AuthenticatedUser, Depends(get_upload_current_user)]
 POST_LOGIN_REDIRECT_PATH = "/dashboard"
-STATUS_FILTERS = ["created", "uploading", "preflight", "confirmed", "processing", "completed", "failed"]
+STATUS_FILTERS = [
+    "created",
+    "uploading",
+    "preflight",
+    "confirmed",
+    "processing",
+    "hitl_pending",
+    "completed",
+    "rejected",
+    "failed",
+]
 STATUS_BADGES = {
     "created": ("Creado", "bg-slate-100 text-slate-600"),
     "uploading": ("Subiendo", "bg-sky-100 text-sky-700"),
     "preflight": ("Preflight", "bg-violet-100 text-violet-700"),
     "confirmed": ("Confirmado", "bg-amber-100 text-amber-700"),
     "processing": ("Procesando", "bg-yellow-100 text-yellow-700"),
+    "hitl_pending": ("Pendiente revisión", "bg-orange-100 text-orange-700"),
     "completed": ("Completado", "bg-green-100 text-green-700"),
+    "rejected": ("Rechazado", "bg-rose-100 text-rose-700"),
     "failed": ("Error", "bg-red-100 text-red-700"),
 }
 
