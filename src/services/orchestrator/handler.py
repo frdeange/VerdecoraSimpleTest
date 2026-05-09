@@ -157,11 +157,27 @@ async def consume_extraction_queue(orchestrator: OrchestratorService, *, max_wai
 
 
 async def run_queue_consumer(orchestrator: OrchestratorService, stop_event: asyncio.Event) -> None:
+    import logging as _logging
+
+    _log = _logging.getLogger(__name__)
+    _log.info(
+        "Queue consumer starting: namespace=%s queue=%s poll_interval=%ss",
+        orchestrator.config.service_bus_fully_qualified_namespace,
+        orchestrator.config.extraction_queue_name,
+        orchestrator.config.service_bus_poll_interval_seconds,
+    )
     while not stop_event.is_set():
-        received = await consume_extraction_queue(orchestrator)
-        if received > 0:
-            continue
+        try:
+            received = await consume_extraction_queue(orchestrator)
+            if received > 0:
+                _log.info("Processed %d message(s) from %s", received, orchestrator.config.extraction_queue_name)
+                continue
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            _log.exception("Queue consumer error — retrying in %ss", orchestrator.config.service_bus_poll_interval_seconds)
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=orchestrator.config.service_bus_poll_interval_seconds)
         except TimeoutError:
             continue
+    _log.info("Queue consumer stopped")
