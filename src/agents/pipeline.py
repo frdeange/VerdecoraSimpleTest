@@ -21,6 +21,8 @@ from .security import sanitize_untrusted_payload
 
 LOGGER = logging.getLogger(__name__)
 
+MAX_EXTRACTION_INPUT_LENGTH = 15000
+
 
 class PipelineDocumentInput(BaseModel):
     document_reference: str
@@ -264,7 +266,15 @@ class AlbaranPipeline:
 
     def _build_extraction_payload(self, input_data: PipelineDocumentInput) -> str:
         readable_text = input_data.raw_text or self._build_readable_ocr_text(input_data.ocr_payload)
-        return readable_text or input_data.document_reference
+        payload = readable_text or input_data.document_reference
+        if len(payload) > MAX_EXTRACTION_INPUT_LENGTH:
+            LOGGER.warning(
+                "Extraction payload truncated from %d to %d chars",
+                len(payload),
+                MAX_EXTRACTION_INPUT_LENGTH,
+            )
+            payload = payload[:MAX_EXTRACTION_INPUT_LENGTH]
+        return payload
 
     @staticmethod
     def _extract_validation_inputs(exc: ValidationError) -> list[str]:
