@@ -186,6 +186,8 @@ module containerApps './container-apps.bicep' = {
     location: location
     logAnalyticsWorkspaceName: 'log-albaranes-${environment}'
     aiServicesEndpoint: aiFoundry.outputs.aiServicesEndpoint
+    aiServicesName: aiFoundry.outputs.aiServicesName
+    projectName: aiFoundry.outputs.aiProjectName
     cosmosEndpoint: cosmos.outputs.cosmosEndpoint
     docIntellEndpoint: docIntell.outputs.docIntellEndpoint
     applicationInsightsConnectionString: monitoring.outputs.applicationInsightsConnectionString
@@ -259,6 +261,7 @@ module identity './identity.bicep' = {
     keyVaultName: keyVault.outputs.keyVaultName
     communicationServiceName: acs.outputs.acsName
     aiServicesAccountName: aiFoundry.outputs.aiServicesName
+    aiProjectName: aiFoundry.outputs.aiProjectName
     docIntellAccountName: docIntell.outputs.docIntellAccountName
     acrName: acr.outputs.acrName
     orchestratorPrincipalId: containerApps.outputs.orchestratorPrincipalId
@@ -369,6 +372,9 @@ output aiServicesEndpoint string = aiFoundry.outputs.aiServicesEndpoint
 
 @description('Azure AI Foundry project endpoint.')
 output aiProjectEndpoint string = aiFoundry.outputs.aiProjectEndpoint
+
+@description('Azure AI Foundry project name.')
+output aiProjectName string = aiFoundry.outputs.aiProjectName
 
 @description('Azure AI Foundry principal id.')
 output aiServicesPrincipalId string = aiFoundry.outputs.aiServicesPrincipalId

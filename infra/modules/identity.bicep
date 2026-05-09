@@ -18,6 +18,9 @@ param communicationServiceName string = ''
 @description('Optional name of the Azure AI Foundry account for granting OpenAI-compatible access to the ACA identity.')
 param aiServicesAccountName string = ''
 
+@description('Optional Azure AI Foundry project name for granting project-scoped data-plane access to the ACA identity.')
+param aiProjectName string = ''
+
 @description('Optional Document Intelligence account name for granting data-plane access to the ACA identity.')
 param docIntellAccountName string = ''
 
@@ -48,8 +51,14 @@ var storageBlobDelegatorRoleDefinitionId = subscriptionResourceId('Microsoft.Aut
 var keyVaultSecretsUserRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
 var contributorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
 var acrPullRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
-var cognitiveServicesOpenAIUserRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')
+var cognitiveServicesOpenAIUserRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 var cognitiveServicesUserRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')
+var azureAIDeveloperRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '64702f94-c441-49e6-a78b-ef80e0188fee')
+var orchestratorAiRoleDefinitionIds = [
+  cognitiveServicesOpenAIUserRoleDefinitionId
+  cognitiveServicesUserRoleDefinitionId
+  azureAIDeveloperRoleDefinitionId
+]
 
 resource cosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' existing = {
   name: cosmosAccountName
@@ -73,6 +82,11 @@ resource communicationService 'Microsoft.Communication/communicationServices@202
 
 resource aiServicesAccount 'Microsoft.CognitiveServices/accounts@2025-10-01-preview' existing = if (!empty(aiServicesAccountName)) {
   name: aiServicesAccountName
+}
+
+resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-10-01-preview' existing = if (!empty(aiServicesAccountName) && !empty(aiProjectName)) {
+  parent: aiServicesAccount
+  name: aiProjectName
 }
 
 resource docIntellAccount 'Microsoft.CognitiveServices/accounts@2024-10-01' existing = if (!empty(docIntellAccountName)) {
@@ -123,15 +137,29 @@ resource orchestratorSystemAssignedBlobReaderRoleAssignment 'Microsoft.Authoriza
   }
 }
 
-resource orchestratorSystemAssignedAiServicesRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(orchestratorPrincipalId) && !empty(aiServicesAccountName)) {
-  name: guid(aiServicesAccount.id, orchestratorPrincipalId, cognitiveServicesOpenAIUserRoleDefinitionId, 'system')
-  scope: aiServicesAccount
-  properties: {
-    principalId: orchestratorPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: cognitiveServicesOpenAIUserRoleDefinitionId
+resource orchestratorSystemAssignedAiServicesRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for roleDefinitionId in orchestratorAiRoleDefinitionIds: if (!empty(orchestratorPrincipalId) && !empty(aiServicesAccountName)) {
+    name: guid(aiServicesAccount.id, orchestratorPrincipalId, roleDefinitionId, 'system')
+    scope: aiServicesAccount
+    properties: {
+      principalId: orchestratorPrincipalId
+      principalType: 'ServicePrincipal'
+      roleDefinitionId: roleDefinitionId
+    }
   }
-}
+]
+
+resource orchestratorSystemAssignedAiProjectRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for roleDefinitionId in orchestratorAiRoleDefinitionIds: if (!empty(orchestratorPrincipalId) && !empty(aiServicesAccountName) && !empty(aiProjectName)) {
+    name: guid(aiProject.id, orchestratorPrincipalId, roleDefinitionId, 'system')
+    scope: aiProject
+    properties: {
+      principalId: orchestratorPrincipalId
+      principalType: 'ServicePrincipal'
+      roleDefinitionId: roleDefinitionId
+    }
+  }
+]
 
 resource orchestratorSystemAssignedDocIntellRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(orchestratorPrincipalId) && !empty(docIntellAccountName)) {
   name: guid(docIntellAccount.id, orchestratorPrincipalId, cognitiveServicesUserRoleDefinitionId, 'system')
