@@ -67,4 +67,5 @@ def test_coherence_prompt_tracks_bc_matches_and_tolerance_checks() -> None:
 
     assert isinstance(decoded, CoherenceCheckResult)
     assert decoded.matched_po_number == "PO-2026-0456"
-    assert decoded.suggested_corrections["line_2_total"] == "Adjusted within 2% tolerance."
+    assert decoded.suggested_corrections[0].field_name == "line_2_total"
+    assert decoded.suggested_corrections[0].suggested_value == "Adjusted within 2% tolerance."
