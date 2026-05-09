@@ -31,6 +31,9 @@ var tags = {
 var uniqueSuffix = substring(uniqueString(subscription().subscriptionId, 'verdecora-simple', environment), 0, 6)
 var aiServicesName = 'vds-ais-${environment}-${uniqueSuffix}'
 var projectName = 'verdecora-project-${environment}'
+// Keep deployment aliases identical to the underlying model names so runtime config stays truthful.
+var gpt5DeploymentModelName = 'gpt-5'
+var gpt5MiniDeploymentModelName = 'gpt-5-mini'
 
 resource aiServices 'Microsoft.CognitiveServices/accounts@2025-10-01-preview' = {
   name: aiServicesName
@@ -77,7 +80,7 @@ resource aiProject 'Microsoft.CognitiveServices/accounts/projects@2025-10-01-pre
 
 resource gpt5Deployment 'Microsoft.CognitiveServices/accounts/deployments@2025-10-01-preview' = if (enableModelDeployments) {
   parent: aiServices
-  name: 'gpt-5'
+  name: gpt5DeploymentModelName
   sku: {
     name: 'GlobalStandard'
     capacity: 10
@@ -85,7 +88,7 @@ resource gpt5Deployment 'Microsoft.CognitiveServices/accounts/deployments@2025-1
   properties: {
     model: {
       format: 'OpenAI'
-      name: 'gpt-5'
+      name: gpt5DeploymentModelName
       version: '2025-08-07'
     }
     versionUpgradeOption: 'OnceNewDefaultVersionAvailable'
@@ -95,7 +98,7 @@ resource gpt5Deployment 'Microsoft.CognitiveServices/accounts/deployments@2025-1
 
 resource gpt5MiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-10-01-preview' = if (enableModelDeployments) {
   parent: aiServices
-  name: 'gpt-5-mini'
+  name: gpt5MiniDeploymentModelName
   dependsOn: [
     gpt5Deployment
   ]
@@ -106,7 +109,7 @@ resource gpt5MiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@20
   properties: {
     model: {
       format: 'OpenAI'
-      name: 'gpt-5-mini'
+      name: gpt5MiniDeploymentModelName
       version: '2025-08-07'
     }
     versionUpgradeOption: 'OnceNewDefaultVersionAvailable'
@@ -171,11 +174,14 @@ output aiServicesEndpoint string = 'https://${aiServicesName}.services.ai.azure.
 @description('AI Project endpoint.')
 output aiProjectEndpoint string = 'https://${aiServicesName}.services.ai.azure.com/api/projects/${projectName}'
 
+@description('AI Project name.')
+output aiProjectName string = aiProject.name
+
 @description('AI Services system-assigned managed identity principal id.')
 output aiServicesPrincipalId string = aiServices.identity.principalId
 
 @description('GPT-5 deployment name.')
-output gpt5DeploymentName string = 'gpt-5'
+output gpt5DeploymentName string = gpt5DeploymentModelName
 
 @description('GPT-5 mini deployment name.')
-output gpt5MiniDeploymentName string = 'gpt-5-mini'
+output gpt5MiniDeploymentName string = gpt5MiniDeploymentModelName

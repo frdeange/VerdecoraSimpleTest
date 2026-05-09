@@ -12,6 +12,12 @@ param logAnalyticsWorkspaceName string = 'log-albaranes-${environment}'
 @description('Azure AI Foundry endpoint exposed to the orchestrator runtime.')
 param aiServicesEndpoint string
 
+@description('Azure AI Foundry account name used to compose the project endpoint.')
+param aiServicesName string
+
+@description('Azure AI Foundry project name used to compose the project endpoint.')
+param projectName string
+
 @description('Cosmos DB endpoint exposed to the workloads.')
 param cosmosEndpoint string
 
@@ -86,6 +92,7 @@ var tags = {
 
 var managedEnvironmentName = 'acae-verdecora-${environment}'
 var serviceBusFullyQualifiedNamespace = '${serviceBusNamespaceName}.servicebus.windows.net'
+var aiProjectEndpoint = 'https://${aiServicesName}.services.ai.azure.com/api/projects/${projectName}'
 var effectiveAcrLoginServer = empty(acrLoginServer) ? 'acrvdsdev4vtapr.azurecr.io' : acrLoginServer
 var resolvedOrchestratorImage = empty(orchestratorImage) ? '${effectiveAcrLoginServer}/verdecora-orchestrator:latest' : orchestratorImage
 var resolvedDedupJobImage = empty(dedupJobImage) ? '${effectiveAcrLoginServer}/verdecora-flow0-dedup:latest' : dedupJobImage
@@ -151,6 +158,10 @@ resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWo
             {
               name: 'AZURE_OPENAI_ENDPOINT'
               value: aiServicesEndpoint
+            }
+            {
+              name: 'AZURE_AI_PROJECT_ENDPOINT'
+              value: aiProjectEndpoint
             }
             {
               name: 'COSMOS_ENDPOINT'
@@ -542,7 +553,7 @@ resource reconciliationJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads
             }
             {
               name: 'AZURE_AI_PROJECT_ENDPOINT'
-              value: aiServicesEndpoint
+              value: aiProjectEndpoint
             }
           ]
           resources: {
@@ -594,7 +605,7 @@ resource learningJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads && en
             }
             {
               name: 'AZURE_AI_PROJECT_ENDPOINT'
-              value: aiServicesEndpoint
+              value: aiProjectEndpoint
             }
           ]
           resources: {

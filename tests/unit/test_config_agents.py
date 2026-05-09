@@ -14,9 +14,7 @@ pytestmark = pytest.mark.unit
 def test_agents_config_defaults() -> None:
     config = AgentsConfig()
 
-    assert config.endpoints.azure_ai_project_endpoint == (
-        "https://verdecora-ais-dev.services.ai.azure.com/api/projects/verdecora-project-dev"
-    )
+    assert config.endpoints.azure_ai_project_endpoint == ""
     assert config.endpoints.document_intelligence_endpoint == (
         "https://verdecora-docintell-dev.cognitiveservices.azure.com/"
     )
