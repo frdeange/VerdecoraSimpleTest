@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-DEFAULT_AZURE_AI_PROJECT_ENDPOINT = "https://verdecora-ais-dev.services.ai.azure.com/api/projects/verdecora-project-dev"
+DEFAULT_AZURE_AI_PROJECT_ENDPOINT = ""
 
 
 class AzureServiceEndpoints(BaseModel):

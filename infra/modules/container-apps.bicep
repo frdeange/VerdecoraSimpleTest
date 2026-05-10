@@ -12,6 +12,12 @@ param logAnalyticsWorkspaceName string = 'log-albaranes-${environment}'
 @description('Azure AI Foundry endpoint exposed to the orchestrator runtime.')
 param aiServicesEndpoint string
 
+@description('Azure AI Foundry account name used to compose the project endpoint.')
+param aiServicesName string
+
+@description('Azure AI Foundry project name used to compose the project endpoint.')
+param projectName string
+
 @description('Cosmos DB endpoint exposed to the workloads.')
 param cosmosEndpoint string
 
@@ -66,7 +72,7 @@ param hitlWebformImage string = ''
 @description('Optional override for the escalation timer ACA Job image.')
 param escalationTimerJobImage string = ''
 
-@description('Deploy Container App workloads (apps/jobs). Placeholder images cover first-time infra rollouts before real application images exist.')
+@description('Deploy Container App workloads (apps/jobs). Defaults use the latest ACR images when explicit image tags are not supplied.')
 param enableWorkloads bool = true
 
 @description('Optional override for the reconciliation ACA Job image.')
@@ -86,13 +92,15 @@ var tags = {
 
 var managedEnvironmentName = 'acae-verdecora-${environment}'
 var serviceBusFullyQualifiedNamespace = '${serviceBusNamespaceName}.servicebus.windows.net'
-var resolvedOrchestratorImage = empty(orchestratorImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : orchestratorImage
-var resolvedDedupJobImage = empty(dedupJobImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : dedupJobImage
-var resolvedHitlWebformImage = empty(hitlWebformImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : hitlWebformImage
-var resolvedEscalationTimerJobImage = empty(escalationTimerJobImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : escalationTimerJobImage
-var resolvedReconciliationJobImage = empty(reconciliationJobImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : reconciliationJobImage
-var resolvedLearningJobImage = empty(learningJobImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : learningJobImage
-var anyCustomImage = !empty(orchestratorImage) || !empty(dedupJobImage) || !empty(hitlWebformImage) || !empty(escalationTimerJobImage) || !empty(reconciliationJobImage) || !empty(learningJobImage)
+var aiProjectEndpoint = 'https://${aiServicesName}.services.ai.azure.com/api/projects/${projectName}'
+var effectiveAcrLoginServer = empty(acrLoginServer) ? 'acrvdsdev4vtapr.azurecr.io' : acrLoginServer
+var resolvedOrchestratorImage = empty(orchestratorImage) ? '${effectiveAcrLoginServer}/verdecora-orchestrator:latest' : orchestratorImage
+var resolvedDedupJobImage = empty(dedupJobImage) ? '${effectiveAcrLoginServer}/verdecora-flow0-dedup:latest' : dedupJobImage
+var resolvedHitlWebformImage = empty(hitlWebformImage) ? '${effectiveAcrLoginServer}/verdecora-hitl-webform:latest' : hitlWebformImage
+var resolvedEscalationTimerJobImage = empty(escalationTimerJobImage) ? '${effectiveAcrLoginServer}/verdecora-escalation-timer:latest' : escalationTimerJobImage
+var resolvedReconciliationJobImage = empty(reconciliationJobImage) ? '${effectiveAcrLoginServer}/verdecora-reconciliation:latest' : reconciliationJobImage
+var resolvedLearningJobImage = empty(learningJobImage) ? '${effectiveAcrLoginServer}/verdecora-learning:latest' : learningJobImage
+var useAcrRegistry = !empty(effectiveAcrLoginServer)
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
   name: logAnalyticsWorkspaceName
@@ -129,9 +137,9 @@ resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWo
       dapr: {
         enabled: false
       }
-      registries: anyCustomImage ? [
+      registries: useAcrRegistry ? [
         {
-          server: acrLoginServer
+          server: effectiveAcrLoginServer
           identity: 'system'
         }
       ] : []
@@ -150,6 +158,10 @@ resource orchestratorApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWo
             {
               name: 'AZURE_OPENAI_ENDPOINT'
               value: aiServicesEndpoint
+            }
+            {
+              name: 'AZURE_AI_PROJECT_ENDPOINT'
+              value: aiProjectEndpoint
             }
             {
               name: 'COSMOS_ENDPOINT'
@@ -252,9 +264,9 @@ resource flow0DedupJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads) {
   properties: {
     environmentId: managedEnvironment.id
     configuration: {
-      registries: anyCustomImage ? [
+      registries: useAcrRegistry ? [
         {
-          server: acrLoginServer
+          server: effectiveAcrLoginServer
           identity: 'system'
         }
       ] : []
@@ -348,9 +360,9 @@ resource hitlWebformApp 'Microsoft.App/containerApps@2025-01-01' = if (enableWor
       dapr: {
         enabled: false
       }
-      registries: anyCustomImage ? [
+      registries: useAcrRegistry ? [
         {
-          server: acrLoginServer
+          server: effectiveAcrLoginServer
           identity: 'system'
         }
       ] : []
@@ -438,9 +450,9 @@ resource escalationTimerJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkload
   properties: {
     environmentId: managedEnvironment.id
     configuration: {
-      registries: anyCustomImage ? [
+      registries: useAcrRegistry ? [
         {
-          server: acrLoginServer
+          server: effectiveAcrLoginServer
           identity: 'system'
         }
       ] : []
@@ -506,9 +518,9 @@ resource reconciliationJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads
   properties: {
     environmentId: managedEnvironment.id
     configuration: {
-      registries: anyCustomImage ? [
+      registries: useAcrRegistry ? [
         {
-          server: acrLoginServer
+          server: effectiveAcrLoginServer
           identity: 'system'
         }
       ] : []
@@ -541,7 +553,7 @@ resource reconciliationJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads
             }
             {
               name: 'AZURE_AI_PROJECT_ENDPOINT'
-              value: aiServicesEndpoint
+              value: aiProjectEndpoint
             }
           ]
           resources: {
@@ -566,9 +578,9 @@ resource learningJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads && en
   properties: {
     environmentId: managedEnvironment.id
     configuration: {
-      registries: anyCustomImage ? [
+      registries: useAcrRegistry ? [
         {
-          server: acrLoginServer
+          server: effectiveAcrLoginServer
           identity: 'system'
         }
       ] : []
@@ -593,7 +605,7 @@ resource learningJob 'Microsoft.App/jobs@2025-01-01' = if (enableWorkloads && en
             }
             {
               name: 'AZURE_AI_PROJECT_ENDPOINT'
-              value: aiServicesEndpoint
+              value: aiProjectEndpoint
             }
           ]
           resources: {

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.42.1.51946",
-      "templateHash": "5818126604005021337"
+      "templateHash": "2520912996108448132"
     }
   },
   "parameters": {
@@ -1359,7 +1359,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "18277292384318423050"
+              "templateHash": "11386992472507386453"
             }
           },
           "parameters": {
@@ -1415,7 +1415,9 @@
             },
             "uniqueSuffix": "[substring(uniqueString(subscription().subscriptionId, 'verdecora-simple', parameters('environment')), 0, 6)]",
             "aiServicesName": "[format('vds-ais-{0}-{1}', parameters('environment'), variables('uniqueSuffix'))]",
-            "projectName": "[format('verdecora-project-{0}', parameters('environment'))]"
+            "projectName": "[format('verdecora-project-{0}', parameters('environment'))]",
+            "gpt5DeploymentModelName": "gpt-5",
+            "gpt5MiniDeploymentModelName": "gpt-5-mini"
           },
           "resources": [
             {
@@ -1466,7 +1468,7 @@
               "condition": "[parameters('enableModelDeployments')]",
               "type": "Microsoft.CognitiveServices/accounts/deployments",
               "apiVersion": "2025-10-01-preview",
-              "name": "[format('{0}/{1}', variables('aiServicesName'), 'gpt-5')]",
+              "name": "[format('{0}/{1}', variables('aiServicesName'), variables('gpt5DeploymentModelName'))]",
               "sku": {
                 "name": "GlobalStandard",
                 "capacity": 10
@@ -1474,7 +1476,7 @@
               "properties": {
                 "model": {
                   "format": "OpenAI",
-                  "name": "gpt-5",
+                  "name": "[variables('gpt5DeploymentModelName')]",
                   "version": "2025-08-07"
                 },
                 "versionUpgradeOption": "OnceNewDefaultVersionAvailable",
@@ -1488,7 +1490,7 @@
               "condition": "[parameters('enableModelDeployments')]",
               "type": "Microsoft.CognitiveServices/accounts/deployments",
               "apiVersion": "2025-10-01-preview",
-              "name": "[format('{0}/{1}', variables('aiServicesName'), 'gpt-5-mini')]",
+              "name": "[format('{0}/{1}', variables('aiServicesName'), variables('gpt5MiniDeploymentModelName'))]",
               "sku": {
                 "name": "GlobalStandard",
                 "capacity": 10
@@ -1496,7 +1498,7 @@
               "properties": {
                 "model": {
                   "format": "OpenAI",
-                  "name": "gpt-5-mini",
+                  "name": "[variables('gpt5MiniDeploymentModelName')]",
                   "version": "2025-08-07"
                 },
                 "versionUpgradeOption": "OnceNewDefaultVersionAvailable",
@@ -1504,7 +1506,7 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiServicesName'))]",
-                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('aiServicesName'), 'gpt-5')]"
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('aiServicesName'), variables('gpt5DeploymentModelName'))]"
               ]
             },
             {
@@ -1586,6 +1588,13 @@
               },
               "value": "[format('https://{0}.services.ai.azure.com/api/projects/{1}', variables('aiServicesName'), variables('projectName'))]"
             },
+            "aiProjectName": {
+              "type": "string",
+              "metadata": {
+                "description": "AI Project name."
+              },
+              "value": "[variables('projectName')]"
+            },
             "aiServicesPrincipalId": {
               "type": "string",
               "metadata": {
@@ -1598,14 +1607,14 @@
               "metadata": {
                 "description": "GPT-5 deployment name."
               },
-              "value": "gpt-5"
+              "value": "[variables('gpt5DeploymentModelName')]"
             },
             "gpt5MiniDeploymentName": {
               "type": "string",
               "metadata": {
                 "description": "GPT-5 mini deployment name."
               },
-              "value": "gpt-5-mini"
+              "value": "[variables('gpt5MiniDeploymentModelName')]"
             }
           }
         }
@@ -1872,6 +1881,12 @@
           "aiServicesEndpoint": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'aiFoundry'), '2025-04-01').outputs.aiServicesEndpoint.value]"
           },
+          "aiServicesName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'aiFoundry'), '2025-04-01').outputs.aiServicesName.value]"
+          },
+          "projectName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'aiFoundry'), '2025-04-01').outputs.aiProjectName.value]"
+          },
           "cosmosEndpoint": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'cosmos'), '2025-04-01').outputs.cosmosEndpoint.value]"
           },
@@ -1887,7 +1902,7 @@
           "ingestionQueueName": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'serviceBus'), '2025-04-01').outputs.ingestionQueueName.value]"
           },
-          "extractionQueueName": {
+          "processingQueueName": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'serviceBus'), '2025-04-01').outputs.extraccionQueueName.value]"
           },
           "hitlReviewQueueName": {
@@ -1901,6 +1916,9 @@
           },
           "acsEndpoint": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'acs'), '2025-04-01').outputs.acsEndpoint.value]"
+          },
+          "acsSenderAddress": {
+            "value": "[format('DoNotReply@{0}', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'acs'), '2025-04-01').outputs.emailSenderDomain.value)]"
           },
           "keyVaultUrl": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'keyVault'), '2025-04-01').outputs.keyVaultUri.value]"
@@ -1934,7 +1952,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "12632874019360599972"
+              "templateHash": "50277790723886851"
             }
           },
           "parameters": {
@@ -1961,6 +1979,18 @@
               "type": "string",
               "metadata": {
                 "description": "Azure AI Foundry endpoint exposed to the orchestrator runtime."
+              }
+            },
+            "aiServicesName": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure AI Foundry account name used to compose the project endpoint."
+              }
+            },
+            "projectName": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure AI Foundry project name used to compose the project endpoint."
               }
             },
             "cosmosEndpoint": {
@@ -1994,11 +2024,11 @@
                 "description": "Queue name that receives raw BlobCreated events for Flow 0 dedup."
               }
             },
-            "extractionQueueName": {
+            "processingQueueName": {
               "type": "string",
               "defaultValue": "extraccion-in",
               "metadata": {
-                "description": "Queue name consumed by the main orchestrator app."
+                "description": "Queue name consumed by the main orchestrator app after Flow 0 dedup forwards messages."
               }
             },
             "hitlDecisionsTopicName": {
@@ -2025,6 +2055,13 @@
               "type": "string",
               "metadata": {
                 "description": "Azure Communication Services endpoint exposed to the workloads."
+              }
+            },
+            "acsSenderAddress": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "ACS sender email address (e.g. DoNotReply@<domain>.azurecomm.net)."
               }
             },
             "keyVaultUrl": {
@@ -2077,7 +2114,7 @@
               "type": "bool",
               "defaultValue": true,
               "metadata": {
-                "description": "Deploy Container App workloads (apps/jobs). Placeholder images cover first-time infra rollouts before real application images exist."
+                "description": "Deploy Container App workloads (apps/jobs). Defaults use the latest ACR images when explicit image tags are not supplied."
               }
             },
             "reconciliationJobImage": {
@@ -2110,13 +2147,15 @@
             },
             "managedEnvironmentName": "[format('acae-verdecora-{0}', parameters('environment'))]",
             "serviceBusFullyQualifiedNamespace": "[format('{0}.servicebus.windows.net', parameters('serviceBusNamespaceName'))]",
-            "resolvedOrchestratorImage": "[if(empty(parameters('orchestratorImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('orchestratorImage'))]",
-            "resolvedDedupJobImage": "[if(empty(parameters('dedupJobImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('dedupJobImage'))]",
-            "resolvedHitlWebformImage": "[if(empty(parameters('hitlWebformImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('hitlWebformImage'))]",
-            "resolvedEscalationTimerJobImage": "[if(empty(parameters('escalationTimerJobImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('escalationTimerJobImage'))]",
-            "resolvedReconciliationJobImage": "[if(empty(parameters('reconciliationJobImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('reconciliationJobImage'))]",
-            "resolvedLearningJobImage": "[if(empty(parameters('learningJobImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('learningJobImage'))]",
-            "anyCustomImage": "[or(or(or(or(or(not(empty(parameters('orchestratorImage'))), not(empty(parameters('dedupJobImage')))), not(empty(parameters('hitlWebformImage')))), not(empty(parameters('escalationTimerJobImage')))), not(empty(parameters('reconciliationJobImage')))), not(empty(parameters('learningJobImage'))))]"
+            "aiProjectEndpoint": "[format('https://{0}.services.ai.azure.com/api/projects/{1}', parameters('aiServicesName'), parameters('projectName'))]",
+            "effectiveAcrLoginServer": "[if(empty(parameters('acrLoginServer')), 'acrvdsdev4vtapr.azurecr.io', parameters('acrLoginServer'))]",
+            "resolvedOrchestratorImage": "[if(empty(parameters('orchestratorImage')), format('{0}/verdecora-orchestrator:latest', variables('effectiveAcrLoginServer')), parameters('orchestratorImage'))]",
+            "resolvedDedupJobImage": "[if(empty(parameters('dedupJobImage')), format('{0}/verdecora-flow0-dedup:latest', variables('effectiveAcrLoginServer')), parameters('dedupJobImage'))]",
+            "resolvedHitlWebformImage": "[if(empty(parameters('hitlWebformImage')), format('{0}/verdecora-hitl-webform:latest', variables('effectiveAcrLoginServer')), parameters('hitlWebformImage'))]",
+            "resolvedEscalationTimerJobImage": "[if(empty(parameters('escalationTimerJobImage')), format('{0}/verdecora-escalation-timer:latest', variables('effectiveAcrLoginServer')), parameters('escalationTimerJobImage'))]",
+            "resolvedReconciliationJobImage": "[if(empty(parameters('reconciliationJobImage')), format('{0}/verdecora-reconciliation:latest', variables('effectiveAcrLoginServer')), parameters('reconciliationJobImage'))]",
+            "resolvedLearningJobImage": "[if(empty(parameters('learningJobImage')), format('{0}/verdecora-learning:latest', variables('effectiveAcrLoginServer')), parameters('learningJobImage'))]",
+            "useAcrRegistry": "[not(empty(variables('effectiveAcrLoginServer')))]"
           },
           "resources": [
             {
@@ -2152,7 +2191,7 @@
                   "dapr": {
                     "enabled": false
                   },
-                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', variables('effectiveAcrLoginServer'), 'identity', 'system')), createArray())]",
                   "ingress": {
                     "external": false,
                     "targetPort": 8080,
@@ -2168,6 +2207,10 @@
                         {
                           "name": "AZURE_OPENAI_ENDPOINT",
                           "value": "[parameters('aiServicesEndpoint')]"
+                        },
+                        {
+                          "name": "AZURE_AI_PROJECT_ENDPOINT",
+                          "value": "[variables('aiProjectEndpoint')]"
                         },
                         {
                           "name": "COSMOS_ENDPOINT",
@@ -2199,11 +2242,11 @@
                         },
                         {
                           "name": "SERVICEBUS_QUEUE_NAME",
-                          "value": "[parameters('extractionQueueName')]"
+                          "value": "[parameters('processingQueueName')]"
                         },
                         {
                           "name": "EXTRACTION_QUEUE_NAME",
-                          "value": "[parameters('extractionQueueName')]"
+                          "value": "[parameters('processingQueueName')]"
                         },
                         {
                           "name": "HITL_QUEUE_NAME",
@@ -2216,6 +2259,10 @@
                         {
                           "name": "ACS_ENDPOINT",
                           "value": "[parameters('acsEndpoint')]"
+                        },
+                        {
+                          "name": "ACS_SENDER_ADDRESS",
+                          "value": "[parameters('acsSenderAddress')]"
                         },
                         {
                           "name": "KEY_VAULT_URL",
@@ -2233,7 +2280,7 @@
                     }
                   ],
                   "scale": {
-                    "minReplicas": 0,
+                    "minReplicas": 1,
                     "maxReplicas": 3,
                     "rules": [
                       {
@@ -2241,7 +2288,7 @@
                         "custom": {
                           "type": "azure-servicebus",
                           "metadata": {
-                            "queueName": "[parameters('extractionQueueName')]",
+                            "queueName": "[parameters('processingQueueName')]",
                             "namespace": "[parameters('serviceBusNamespaceName')]",
                             "messageCount": "1"
                           },
@@ -2269,7 +2316,7 @@
               "properties": {
                 "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
                 "configuration": {
-                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', variables('effectiveAcrLoginServer'), 'identity', 'system')), createArray())]",
                   "triggerType": "Event",
                   "replicaTimeout": 1800,
                   "replicaRetryLimit": 1,
@@ -2319,7 +2366,7 @@
                         },
                         {
                           "name": "FLOW0_TARGET_QUEUE_NAME",
-                          "value": "[parameters('extractionQueueName')]"
+                          "value": "[parameters('processingQueueName')]"
                         },
                         {
                           "name": "STORAGE_ACCOUNT_URL",
@@ -2363,7 +2410,7 @@
                   "dapr": {
                     "enabled": false
                   },
-                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', variables('effectiveAcrLoginServer'), 'identity', 'system')), createArray())]",
                   "ingress": {
                     "external": true,
                     "allowInsecure": false,
@@ -2404,6 +2451,10 @@
                         {
                           "name": "ACS_ENDPOINT",
                           "value": "[parameters('acsEndpoint')]"
+                        },
+                        {
+                          "name": "ACS_SENDER_ADDRESS",
+                          "value": "[parameters('acsSenderAddress')]"
                         },
                         {
                           "name": "HITL_DECISIONS_TOPIC_NAME",
@@ -2447,7 +2498,7 @@
               "properties": {
                 "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
                 "configuration": {
-                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', variables('effectiveAcrLoginServer'), 'identity', 'system')), createArray())]",
                   "triggerType": "Schedule",
                   "replicaTimeout": 1800,
                   "replicaRetryLimit": 1,
@@ -2480,6 +2531,10 @@
                           "value": "[parameters('acsEndpoint')]"
                         },
                         {
+                          "name": "ACS_SENDER_ADDRESS",
+                          "value": "[parameters('acsSenderAddress')]"
+                        },
+                        {
                           "name": "SERVICE_BUS_NAMESPACE",
                           "value": "[parameters('serviceBusNamespaceName')]"
                         }
@@ -2509,7 +2564,7 @@
               "properties": {
                 "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
                 "configuration": {
-                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', variables('effectiveAcrLoginServer'), 'identity', 'system')), createArray())]",
                   "triggerType": "Schedule",
                   "replicaTimeout": 1800,
                   "replicaRetryLimit": 1,
@@ -2539,7 +2594,7 @@
                         },
                         {
                           "name": "AZURE_AI_PROJECT_ENDPOINT",
-                          "value": "[parameters('aiServicesEndpoint')]"
+                          "value": "[variables('aiProjectEndpoint')]"
                         }
                       ],
                       "resources": {
@@ -2567,7 +2622,7 @@
               "properties": {
                 "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('managedEnvironmentName'))]",
                 "configuration": {
-                  "registries": "[if(variables('anyCustomImage'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', variables('effectiveAcrLoginServer'), 'identity', 'system')), createArray())]",
                   "triggerType": "Schedule",
                   "replicaTimeout": 1800,
                   "replicaRetryLimit": 1,
@@ -2589,7 +2644,7 @@
                         },
                         {
                           "name": "AZURE_AI_PROJECT_ENDPOINT",
-                          "value": "[parameters('aiServicesEndpoint')]"
+                          "value": "[variables('aiProjectEndpoint')]"
                         }
                       ],
                       "resources": {
@@ -2795,7 +2850,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "16095119262093221612"
+              "templateHash": "12960010392536979543"
             }
           },
           "parameters": {
@@ -2918,8 +2973,9 @@
               "managed-by": "bicep"
             },
             "managedEnvironmentName": "[format('acae-upload-web-{0}', parameters('environment'))]",
-            "resolvedUploadWebImage": "[if(empty(parameters('uploadWebImage')), 'mcr.microsoft.com/k8se/quickstart:latest', parameters('uploadWebImage'))]",
-            "useAcrRegistry": "[not(empty(parameters('uploadWebImage')))]",
+            "effectiveAcrLoginServer": "[if(empty(parameters('acrLoginServer')), 'acrvdsdev4vtapr.azurecr.io', parameters('acrLoginServer'))]",
+            "resolvedUploadWebImage": "[if(empty(parameters('uploadWebImage')), format('{0}/verdecora-upload-web:latest', variables('effectiveAcrLoginServer')), parameters('uploadWebImage'))]",
+            "useAcrRegistry": "[not(empty(variables('effectiveAcrLoginServer')))]",
             "rawBlobContainerName": "albaranes-raw",
             "serviceBusFullyQualifiedNamespace": "[format('{0}.servicebus.windows.net', parameters('serviceBusNamespaceName'))]",
             "extractionQueueName": "extraccion-queue",
@@ -2966,7 +3022,7 @@
                 "configuration": {
                   "activeRevisionsMode": "Single",
                   "secrets": "[if(variables('authEnabled'), createArray(createObject('name', variables('authSecretName'), 'value', parameters('entraClientSecret'))), createArray())]",
-                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', parameters('acrLoginServer'), 'identity', 'system')), createArray())]",
+                  "registries": "[if(variables('useAcrRegistry'), createArray(createObject('server', variables('effectiveAcrLoginServer'), 'identity', 'system')), createArray())]",
                   "ingress": {
                     "external": true,
                     "allowInsecure": false,
@@ -3350,6 +3406,9 @@
           "aiServicesAccountName": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'aiFoundry'), '2025-04-01').outputs.aiServicesName.value]"
           },
+          "aiProjectName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'aiFoundry'), '2025-04-01').outputs.aiProjectName.value]"
+          },
           "docIntellAccountName": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'docIntell'), '2025-04-01').outputs.docIntellAccountName.value]"
           },
@@ -3377,7 +3436,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.42.1.51946",
-              "templateHash": "288928943340083084"
+              "templateHash": "8629733435142289160"
             }
           },
           "parameters": {
@@ -3418,6 +3477,13 @@
               "defaultValue": "",
               "metadata": {
                 "description": "Optional name of the Azure AI Foundry account for granting OpenAI-compatible access to the ACA identity."
+              }
+            },
+            "aiProjectName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional Azure AI Foundry project name for granting project-scoped data-plane access to the ACA identity."
               }
             },
             "docIntellAccountName": {
@@ -3480,8 +3546,14 @@
             "keyVaultSecretsUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
             "contributorRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
             "acrPullRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
-            "cognitiveServicesOpenAIUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd')]",
-            "cognitiveServicesUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')]"
+            "cognitiveServicesOpenAIUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+            "cognitiveServicesUserRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'a97b65f3-24c7-4388-baec-2e87135dc908')]",
+            "azureAIDeveloperRoleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '64702f94-c441-49e6-a78b-ef80e0188fee')]",
+            "orchestratorAiRoleDefinitionIds": [
+              "[variables('cognitiveServicesOpenAIUserRoleDefinitionId')]",
+              "[variables('cognitiveServicesUserRoleDefinitionId')]",
+              "[variables('azureAIDeveloperRoleDefinitionId')]"
+            ]
           },
           "resources": [
             {
@@ -3532,15 +3604,35 @@
               }
             },
             {
+              "copy": {
+                "name": "orchestratorSystemAssignedAiServicesRoleAssignments",
+                "count": "[length(variables('orchestratorAiRoleDefinitionIds'))]"
+              },
               "condition": "[and(not(empty(parameters('orchestratorPrincipalId'))), not(empty(parameters('aiServicesAccountName'))))]",
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('aiServicesAccountName'))]",
-              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('aiServicesAccountName')), parameters('orchestratorPrincipalId'), variables('cognitiveServicesOpenAIUserRoleDefinitionId'), 'system')]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('aiServicesAccountName')), parameters('orchestratorPrincipalId'), variables('orchestratorAiRoleDefinitionIds')[copyIndex()], 'system')]",
               "properties": {
                 "principalId": "[parameters('orchestratorPrincipalId')]",
                 "principalType": "ServicePrincipal",
-                "roleDefinitionId": "[variables('cognitiveServicesOpenAIUserRoleDefinitionId')]"
+                "roleDefinitionId": "[variables('orchestratorAiRoleDefinitionIds')[copyIndex()]]"
+              }
+            },
+            {
+              "copy": {
+                "name": "orchestratorSystemAssignedAiProjectRoleAssignments",
+                "count": "[length(variables('orchestratorAiRoleDefinitionIds'))]"
+              },
+              "condition": "[and(and(not(empty(parameters('orchestratorPrincipalId'))), not(empty(parameters('aiServicesAccountName')))), not(empty(parameters('aiProjectName'))))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('aiServicesAccountName'), parameters('aiProjectName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts/projects', parameters('aiServicesAccountName'), parameters('aiProjectName')), parameters('orchestratorPrincipalId'), variables('orchestratorAiRoleDefinitionIds')[copyIndex()], 'system')]",
+              "properties": {
+                "principalId": "[parameters('orchestratorPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('orchestratorAiRoleDefinitionIds')[copyIndex()]]"
               }
             },
             {
@@ -4663,6 +4755,13 @@
         "description": "Azure AI Foundry project endpoint."
       },
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'aiFoundry'), '2025-04-01').outputs.aiProjectEndpoint.value]"
+    },
+    "aiProjectName": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure AI Foundry project name."
+      },
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('resourceGroupName')), 'Microsoft.Resources/deployments', 'aiFoundry'), '2025-04-01').outputs.aiProjectName.value]"
     },
     "aiServicesPrincipalId": {
       "type": "string",

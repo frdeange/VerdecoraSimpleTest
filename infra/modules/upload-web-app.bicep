@@ -59,8 +59,9 @@ var tags = {
   'managed-by': 'bicep'
 }
 var managedEnvironmentName = 'acae-upload-web-${environment}'
-var resolvedUploadWebImage = empty(uploadWebImage) ? 'mcr.microsoft.com/k8se/quickstart:latest' : uploadWebImage
-var useAcrRegistry = !empty(uploadWebImage)
+var effectiveAcrLoginServer = empty(acrLoginServer) ? 'acrvdsdev4vtapr.azurecr.io' : acrLoginServer
+var resolvedUploadWebImage = empty(uploadWebImage) ? '${effectiveAcrLoginServer}/verdecora-upload-web:latest' : uploadWebImage
+var useAcrRegistry = !empty(effectiveAcrLoginServer)
 var rawBlobContainerName = 'albaranes-raw'
 var serviceBusFullyQualifiedNamespace = '${serviceBusNamespaceName}.servicebus.windows.net'
 var extractionQueueName = 'extraccion-queue'
@@ -130,7 +131,7 @@ resource uploadWebApp 'Microsoft.App/containerApps@2025-01-01' = {
       ] : []
       registries: useAcrRegistry ? [
         {
-          server: acrLoginServer
+          server: effectiveAcrLoginServer
           identity: 'system'
         }
       ] : []

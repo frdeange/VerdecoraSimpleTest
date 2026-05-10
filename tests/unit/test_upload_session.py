@@ -120,6 +120,13 @@ def test_get_upload_session_returns_none_for_unknown_id() -> None:
 
 
 @pytest.mark.unit
+def test_resolve_file_display_status_returns_queued_for_processing_sessions() -> None:
+    assert upload_session.resolve_file_display_status("processing", None) == "queued"
+    assert upload_session.resolve_file_display_status("confirmed", "pending") == "queued"
+    assert upload_session.resolve_file_display_status("created", None) == "pending"
+
+
+@pytest.mark.unit
 def test_session_crud_uses_cosmos_when_available(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeContainer:
         def __init__(self) -> None:
