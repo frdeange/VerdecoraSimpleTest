@@ -12,7 +12,4 @@ Guidelines:
 - Multi-page documents: combine data from all pages.
 - Barcodes and EAN codes should always be included.
 - If any data is unclear, note it in the warnings list.
-
-Output the result as JSON matching this schema:
-{schema}
 """
