@@ -119,7 +119,6 @@ def sample_extraction(
     confidence_score: float = 0.96,
     extraction_warnings: list[str] | None = None,
     source_pages: list[int] | None = None,
-    raw_text: str | None = "ALBARAN DE ENTREGA",
     line_items: list[LineItem] | None = None,
 ) -> AlbaranExtraction:
     items = line_items if line_items is not None else sample_line_items(supplier_name=supplier_name)
@@ -129,7 +128,6 @@ def sample_extraction(
             total_amount=sum(item.total or 0.0 for item in items),
         ),
         line_items=items,
-        raw_text=raw_text,
         confidence_score=confidence_score,
         extraction_warnings=list(extraction_warnings or []),
         source_pages=list(source_pages or [1]),
@@ -265,7 +263,6 @@ def sample_multi_page_extraction() -> AlbaranExtraction:
         confidence_score=0.88,
         extraction_warnings=["Page 2 contains faint handwriting."],
         source_pages=[1, 2],
-        raw_text="ALBARAN PAGE 1\nALBARAN PAGE 2",
     )
 
 
