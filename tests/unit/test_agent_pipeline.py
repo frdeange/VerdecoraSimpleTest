@@ -8,7 +8,6 @@ import pytest
 from agent_framework import Message
 
 from src.agents.pipeline import (
-    MAX_EXTRACTION_INPUT_LENGTH,
     AlbaranPipeline,
     PipelineDocumentInput,
     PipelineRunResult,
@@ -240,7 +239,7 @@ async def test_pipeline_routes_hitl_review_when_validation_requires_manual_revie
 
 
 @pytest.mark.asyncio
-async def test_pipeline_formats_ocr_payload_into_readable_text_for_extractor() -> None:
+async def test_pipeline_uses_only_content_from_ocr_payload_for_extractor() -> None:
     config = AgentsConfig.model_validate({"thresholds": {"low_value_coherence_threshold": 10.0}})
     extraction_result = sample_extraction()
     workflows = {
@@ -274,34 +273,7 @@ async def test_pipeline_formats_ocr_payload_into_readable_text_for_extractor() -
 
     assert result.routing_decision == "extract"
     extractor_payload = workflows["extractor"].payloads[0]
-    assert extractor_payload.startswith("ALBARÁN HERSTERA")
-    assert "Key-value pairs:" in extractor_payload
-    assert "- pedido: PO-2026-0456" in extractor_payload
-    assert "Table 1:" in extractor_payload
-    assert "Código | Cantidad" in extractor_payload
-    assert "ABC-001 | 3" in extractor_payload
-
-
-@pytest.mark.asyncio
-async def test_build_extraction_payload_truncates_oversized_input(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    pipeline = AlbaranPipeline(agents=_named_agents())
-    oversized_payload = "A" * (MAX_EXTRACTION_INPUT_LENGTH + 2000)
-    input_data = PipelineDocumentInput(
-        document_reference="https://storage/account/albaran.pdf",
-        raw_text=oversized_payload,
-    )
-
-    with caplog.at_level("WARNING"):
-        payload = pipeline._build_extraction_payload(input_data)
-
-    assert len(payload) == MAX_EXTRACTION_INPUT_LENGTH
-    assert payload == oversized_payload[:MAX_EXTRACTION_INPUT_LENGTH]
-    assert (
-        f"Extraction payload truncated from {len(oversized_payload)} to {MAX_EXTRACTION_INPUT_LENGTH} chars"
-        in caplog.text
-    )
+    assert extractor_payload == "ALBARÁN HERSTERA"
 
 
 @pytest.mark.asyncio
