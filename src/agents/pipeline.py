@@ -20,7 +20,6 @@ from .factory import ToolRegistry, create_agents, create_clients
 from .security import sanitize_untrusted_payload
 
 LOGGER = logging.getLogger(__name__)
-MAX_EXTRACTION_INPUT_LENGTH = 12000
 
 
 class PipelineDocumentInput(BaseModel):
@@ -252,28 +251,11 @@ class AlbaranPipeline:
             return self._normalize_text_block(ocr_payload)
         if not isinstance(ocr_payload, dict):
             return None
-
-        sections: list[str] = []
-        if content := self._normalize_text_block(ocr_payload.get("content")):
-            sections.append(content)
-        if kv_section := self._format_key_value_pairs(ocr_payload.get("key_value_pairs")):
-            sections.append(kv_section)
-        if tables_section := self._format_tables(ocr_payload.get("tables")):
-            sections.append(tables_section)
-
-        return "\n\n".join(sections) if sections else None
+        return self._normalize_text_block(ocr_payload.get("content"))
 
     def _build_extraction_payload(self, input_data: PipelineDocumentInput) -> str:
         readable_text = input_data.raw_text or self._build_readable_ocr_text(input_data.ocr_payload)
-        payload = readable_text or input_data.document_reference
-        if len(payload) > MAX_EXTRACTION_INPUT_LENGTH:
-            LOGGER.warning(
-                "Extraction payload truncated from %d to %d chars",
-                len(payload),
-                MAX_EXTRACTION_INPUT_LENGTH,
-            )
-            payload = payload[:MAX_EXTRACTION_INPUT_LENGTH]
-        return payload
+        return readable_text or input_data.document_reference
 
     @staticmethod
     def _extract_validation_inputs(exc: ValidationError) -> list[str]:

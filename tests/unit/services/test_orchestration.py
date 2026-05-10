@@ -82,7 +82,7 @@ def test_orchestrator_config_defaults_to_processing_queue(monkeypatch: pytest.Mo
     assert config.extraction_queue_name == "extraccion-in"
 
 
-def test_build_pipeline_input_populates_readable_raw_text() -> None:
+def test_build_pipeline_input_populates_content_raw_text() -> None:
     service = OrchestratorService(config=OrchestratorConfig(service_bus_polling_enabled=False), agent_client=object())
 
     pipeline_input = service._build_pipeline_input(
@@ -107,6 +107,4 @@ def test_build_pipeline_input_populates_readable_raw_text() -> None:
     )
 
     assert pipeline_input.raw_text is not None
-    assert pipeline_input.raw_text.startswith("ALBARÁN HERSTERA")
-    assert "- pedido: PO-2026-0456" in pipeline_input.raw_text
-    assert "Artículo | Cantidad" in pipeline_input.raw_text
+    assert pipeline_input.raw_text == "ALBARÁN HERSTERA"
