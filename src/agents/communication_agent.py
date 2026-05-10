@@ -80,7 +80,7 @@ class CommunicationAgentService:
         pdf_sas_url = str(review_record.get("pdf_sas_url") or review_record.get("blob_url") or "")
         return HITLNotification(
             albaran_id=self._get_albaran_id(review_record),
-            recipient_email=str(review_record.get("recipient_email") or "responsable@verdecora.example.com"),
+            recipient_email=str(review_record.get("recipient_email") or "admin@gpsazure.com"),
             subject=summary.subject,
             body_html=summary.body_html,
             escalation_level=escalation_level,
