@@ -42,7 +42,6 @@ class AlbaranHeader(BaseModel):
 class AlbaranExtraction(BaseModel):
     header: AlbaranHeader
     line_items: list[LineItem]
-    raw_text: str | None = None
     confidence_score: float = Field(ge=0.0, le=1.0)
     extraction_warnings: list[str] = Field(default_factory=list)
     source_pages: list[int] = Field(default_factory=list)

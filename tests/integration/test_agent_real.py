@@ -254,7 +254,7 @@ def test_real_extractor_pipeline(real_extraction: AlbaranExtraction) -> None:
     assert real_extraction.line_items
     assert any(item.quantity > 0 for item in real_extraction.line_items)
     assert any(item.unit_price is not None or item.total is not None for item in real_extraction.line_items)
-    assert real_extraction.source_pages or real_extraction.raw_text is not None
+    assert real_extraction.source_pages
     assert real_extraction.confidence_score >= 0.5
 
 

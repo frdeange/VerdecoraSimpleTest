@@ -20,7 +20,7 @@ pytestmark = pytest.mark.unit
 def test_build_extractor_instructions_uses_default_tool_names() -> None:
     instructions = build_extractor_instructions()
 
-    assert "expert document extraction agent" in instructions
+    assert "document processing assistant" in instructions
     assert '"confidence_score"' in instructions
     assert DEFAULT_EXTRACTOR_TOOL_NAMES[0] in instructions
     assert DEFAULT_EXTRACTOR_TOOL_NAMES[1] in instructions
