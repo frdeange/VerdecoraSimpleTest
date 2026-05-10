@@ -58,7 +58,8 @@ def build_triage_instructions() -> str:
 
 
 def build_extractor_instructions(tool_names: Sequence[str] = DEFAULT_EXTRACTOR_TOOL_NAMES) -> str:
-    return _build_system_prompt(EXTRACTOR_SYSTEM_PROMPT, AlbaranExtraction, tool_names=tool_names)
+    tool_hint = f"\nAvailable MCP tools: {', '.join(tool_names)}" if tool_names else ""
+    return harden_system_prompt(EXTRACTOR_SYSTEM_PROMPT + tool_hint)
 
 
 def build_coherence_instructions(tool_names: Sequence[str] = DEFAULT_COHERENCE_TOOL_NAMES) -> str:
